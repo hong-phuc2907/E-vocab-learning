@@ -1,22 +1,25 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Vocabulary Learning API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: words
+    description: Vocabulary word operations
+  - name: stats
+    description: Learning statistics
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +27,194 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /words:
+    get:
+      operationId: listWords
+      tags: [words]
+      summary: List all vocabulary words
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: difficulty
+          in: query
+          schema:
+            type: string
+        - name: mastered
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of words
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Word"
+    post:
+      operationId: createWord
+      tags: [words]
+      summary: Add a new word
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WordInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+
+  /words/daily:
+    get:
+      operationId: getDailyWord
+      tags: [words]
+      summary: Get the word of the day
+      responses:
+        "200":
+          description: Word of the day
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+
+  /words/due:
+    get:
+      operationId: getDueWords
+      tags: [words]
+      summary: Get words due for review
+      responses:
+        "200":
+          description: Words due for review
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Word"
+
+  /words/{id}:
+    get:
+      operationId: getWord
+      tags: [words]
+      summary: Get a word by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The word
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateWord
+      tags: [words]
+      summary: Update a word
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WordUpdate"
+      responses:
+        "200":
+          description: Updated word
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+    delete:
+      operationId: deleteWord
+      tags: [words]
+      summary: Delete a word
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /words/{id}/review:
+    post:
+      operationId: reviewWord
+      tags: [words]
+      summary: Record a word review result
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewInput"
+      responses:
+        "200":
+          description: Updated word after review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+
+  /stats:
+    get:
+      operationId: getStats
+      tags: [stats]
+      summary: Get learning statistics
+      responses:
+        "200":
+          description: Learning stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stats"
+
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [words]
+      summary: List all categories
+      responses:
+        "200":
+          description: Categories with counts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +225,126 @@ components:
       required:
         - status
 
+    Word:
+      type: object
+      required: [id, term, definition, masteryLevel, createdAt]
+      properties:
+        id:
+          type: integer
+        term:
+          type: string
+        definition:
+          type: string
+        partOfSpeech:
+          type: ["string", "null"]
+        example:
+          type: ["string", "null"]
+        pronunciation:
+          type: ["string", "null"]
+        category:
+          type: ["string", "null"]
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        masteryLevel:
+          type: integer
+          description: 0-5 mastery scale
+        reviewCount:
+          type: integer
+        correctCount:
+          type: integer
+        lastReviewedAt:
+          type: ["string", "null"]
+        nextReviewAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    WordInput:
+      type: object
+      required: [term, definition]
+      properties:
+        term:
+          type: string
+          minLength: 1
+        definition:
+          type: string
+          minLength: 1
+        partOfSpeech:
+          type: string
+        example:
+          type: string
+        pronunciation:
+          type: string
+        category:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+
+    WordUpdate:
+      type: object
+      properties:
+        term:
+          type: string
+        definition:
+          type: string
+        partOfSpeech:
+          type: string
+        example:
+          type: string
+        pronunciation:
+          type: string
+        category:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+
+    ReviewInput:
+      type: object
+      required: [correct]
+      properties:
+        correct:
+          type: boolean
+        timeSpentMs:
+          type: integer
+
+    Stats:
+      type: object
+      required: [totalWords, masteredWords, reviewedToday, currentStreak, totalReviews, accuracy]
+      properties:
+        totalWords:
+          type: integer
+        masteredWords:
+          type: integer
+        reviewedToday:
+          type: integer
+        currentStreak:
+          type: integer
+        totalReviews:
+          type: integer
+        accuracy:
+          type: number
+        dueForReview:
+          type: integer
+        byDifficulty:
+          type: object
+          properties:
+            easy:
+              type: integer
+            medium:
+              type: integer
+            hard:
+              type: integer
+
+    Category:
+      type: object
+      required: [name, count]
+      properties:
+        name:
+          type: string
+        count:
+          type: integer
+        masteredCount:
+          type: integer

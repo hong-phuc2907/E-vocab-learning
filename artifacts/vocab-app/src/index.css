@@ -1,0 +1,188 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover-border: hsl(var(--popover-border));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary-border: var(--primary-border);
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary-border: var(--secondary-border);
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-muted-border: var(--muted-border);
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent-border: var(--accent-border);
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive-border: var(--destructive-border);
+
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-primary-border: var(--sidebar-primary-border);
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-accent-border: var(--sidebar-accent-border);
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  --font-sans: var(--app-font-sans);
+  --font-serif: var(--app-font-serif);
+  --font-mono: var(--app-font-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --background: 40 33% 98%; /* Warm paper cream */
+  --foreground: 200 40% 15%; /* Very dark deep teal */
+  
+  --card: 40 33% 100%;
+  --card-foreground: 200 40% 15%;
+  --card-border: 40 20% 90%;
+  
+  --popover: 40 33% 100%;
+  --popover-foreground: 200 40% 15%;
+  --popover-border: 40 20% 90%;
+  
+  --primary: 195 65% 25%; /* Deep teal */
+  --primary-foreground: 40 33% 98%;
+  
+  --secondary: 35 30% 92%; /* Warm grey */
+  --secondary-foreground: 200 40% 20%;
+  
+  --muted: 35 25% 94%;
+  --muted-foreground: 200 20% 45%;
+  
+  --accent: 15 50% 50%; /* Warm rust orange accent */
+  --accent-foreground: 40 33% 98%;
+  
+  --destructive: 0 60% 45%;
+  --destructive-foreground: 40 33% 98%;
+  
+  --border: 40 20% 88%;
+  --input: 40 20% 88%;
+  --ring: 195 65% 25%;
+  
+  --sidebar: 40 33% 96%;
+  --sidebar-foreground: 200 40% 20%;
+  --sidebar-border: 40 20% 88%;
+  --sidebar-primary: 195 65% 25%;
+  --sidebar-primary-foreground: 40 33% 98%;
+  --sidebar-accent: 35 30% 90%;
+  --sidebar-accent-foreground: 200 40% 20%;
+  --sidebar-ring: 195 65% 25%;
+  
+  --radius: 0.5rem;
+  
+  --app-font-sans: 'Inter', sans-serif;
+  --app-font-serif: 'Georgia', serif;
+  --app-font-mono: monospace;
+}
+
+.dark {
+  --background: 200 40% 8%; /* Very dark deep teal */
+  --foreground: 40 33% 96%;
+  
+  --card: 200 40% 12%;
+  --card-foreground: 40 33% 96%;
+  --card-border: 200 30% 18%;
+  
+  --popover: 200 40% 12%;
+  --popover-foreground: 40 33% 96%;
+  --popover-border: 200 30% 18%;
+  
+  --primary: 195 40% 40%;
+  --primary-foreground: 200 40% 8%;
+  
+  --secondary: 200 30% 18%;
+  --secondary-foreground: 40 33% 96%;
+  
+  --muted: 200 30% 18%;
+  --muted-foreground: 200 10% 65%;
+  
+  --accent: 15 50% 50%;
+  --accent-foreground: 40 33% 98%;
+  
+  --destructive: 0 50% 40%;
+  --destructive-foreground: 40 33% 96%;
+  
+  --border: 200 30% 18%;
+  --input: 200 30% 18%;
+  --ring: 195 40% 40%;
+  
+  --sidebar: 200 40% 10%;
+  --sidebar-foreground: 40 33% 96%;
+  --sidebar-border: 200 30% 18%;
+  --sidebar-primary: 195 40% 40%;
+  --sidebar-primary-foreground: 200 40% 8%;
+  --sidebar-accent: 200 30% 18%;
+  --sidebar-accent-foreground: 40 33% 96%;
+  --sidebar-ring: 195 40% 40%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+.flip-card {
+  perspective: 1000px;
+}
+
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.flip-card.flipped .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+.flip-card-front, .flip-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.flip-card-back {
+  transform: rotateY(180deg);
+}
