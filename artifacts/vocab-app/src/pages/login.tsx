@@ -3,11 +3,10 @@ import { Book } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Login() {
-  const { signInWithGoogle, redirecting } = useAuth();
+  const { signInWithGoogle, redirecting, authError } = useAuth();
 
   const handleGoogle = async () => {
     await signInWithGoogle();
-    // Page will redirect to Google — no further action needed here
   };
 
   return (
@@ -42,6 +41,12 @@ export default function Login() {
             </svg>
             {redirecting ? "Đang chuyển hướng..." : "Đăng nhập với Google"}
           </Button>
+
+          {authError && (
+            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-left">
+              <p className="text-xs text-destructive leading-relaxed">{authError}</p>
+            </div>
+          )}
         </div>
 
         <p className="text-xs text-muted-foreground">

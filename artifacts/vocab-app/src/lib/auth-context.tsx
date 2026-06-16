@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import {
   type User,
   onAuthStateChanged,
+  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   signOut,
@@ -12,6 +13,7 @@ interface AuthContextValue {
   user: User | null;
   loading: boolean;
   redirecting: boolean;
+  authError: string | null;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -22,12 +24,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [redirecting, setRedirecting] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Handle the result when Google redirects back to our app
-    getRedirectResult(auth).catch(() => {
-      // Ignore errors — user just landed fresh, no redirect pending
-    });
+    // Resolve any pending redirect sign-in
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) setUser(result.user);
+      })
+      .catch((err) => {
+        if (err?.code !== "auth/no-auth-event") {
+          console.error("Redirect result error:", err?.code);
+        }
+      });
 
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
@@ -38,8 +47,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signInWithGoogle = async () => {
-    setRedirecting(true);
-    await signInWithRedirect(auth, googleProvider);
+    setAuthError(null);
+    try {
+      // Popup works best on direct URLs (published app)
+      await signInWithPopup(auth, googleProvider);
+    } catch (err: any) {
+      if (
+        err?.code === "auth/popup-blocked" ||
+        err?.code === "auth/popup-closed-by-user"
+      ) {
+        // Popup was blocked (iframe / strict browser) — fall back to redirect
+        setRedirecting(true);
+        await signInWithRedirect(auth, googleProvider);
+      } else if (err?.code === "auth/unauthorized-domain") {
+        setAuthError(
+          `Domain chưa được cấp phép. Vào Firebase Console → Authentication → Settings → Authorized domains → thêm: ${window.location.hostname}`
+        );
+      } else {
+        setAuthError("Đăng nhập thất bại. Vui lòng thử lại.");
+        console.error("Sign-in error:", err?.code, err?.message);
+      }
+    }
   };
 
   const logout = async () => {
@@ -47,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, redirecting, signInWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, loading, redirecting, authError, signInWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );
