@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/lib/auth-context";
-import { getDueWords, reviewWord, type Word } from "@/lib/firestore";
+import { getDueWords, reviewWord, updateStreak, type Word } from "@/lib/firestore";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +58,7 @@ export default function Study() {
     if (!currentWord || !user) return;
     setIsPending(true);
     await reviewWord(user.uid, currentWord.id, correct);
+    if (sessionTotal === 0) updateStreak(user.uid);
     if (correct) setSessionCorrect((c) => c + 1);
     setSessionTotal((t) => t + 1);
     if (currentIndex + 1 >= words.length) {

@@ -3,6 +3,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Each user can read and write their own profile doc (stores streak)
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
     // Each user can only read and write their own words
     match /users/{userId}/words/{wordId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;

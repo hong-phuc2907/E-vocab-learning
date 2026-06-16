@@ -6,13 +6,50 @@ import {
   deleteDoc,
   getDocs,
   getDoc,
+  setDoc,
   query,
-  where,
   orderBy,
   serverTimestamp,
   Timestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
+
+function todayKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function yesterdayKey(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function userDoc(uid: string) {
+  return doc(db, "users", uid);
+}
+
+export async function updateStreak(uid: string): Promise<number> {
+  const ref = userDoc(uid);
+  const snap = await getDoc(ref);
+  const today = todayKey();
+  const yesterday = yesterdayKey();
+
+  if (!snap.exists()) {
+    await setDoc(ref, { currentStreak: 1, lastStudiedDate: today });
+    return 1;
+  }
+
+  const data = snap.data();
+  const last: string | undefined = data.lastStudiedDate;
+
+  if (last === today) {
+    return data.currentStreak ?? 1;
+  }
+
+  const newStreak = last === yesterday ? (data.currentStreak ?? 0) + 1 : 1;
+  await updateDoc(ref, { currentStreak: newStreak, lastStudiedDate: today });
+  return newStreak;
+}
 
 export interface Word {
   id: string;
@@ -171,13 +208,22 @@ export interface Stats {
 
 export async function getStats(uid: string): Promise<Stats> {
   const now = new Date();
-  const snap = await getDocs(wordsCol(uid));
-  const words = snap.docs.map((d) => toWord(d.id, d.data()));
+  const [wordsSnap, metaSnap] = await Promise.all([
+    getDocs(wordsCol(uid)),
+    getDoc(userDoc(uid)),
+  ]);
+  const words = wordsSnap.docs.map((d) => toWord(d.id, d.data()));
   const totalWords = words.length;
   const masteredWords = words.filter((w) => w.masteryLevel >= 5).length;
   const dueForReview = words.filter((w) => !w.nextReviewAt || new Date(w.nextReviewAt) <= now).length;
   const totalReviews = words.reduce((s, w) => s + w.reviewCount, 0);
   const totalCorrect = words.reduce((s, w) => s + w.correctCount, 0);
   const accuracy = totalReviews > 0 ? Math.round((totalCorrect / totalReviews) * 100) : 0;
-  return { totalWords, masteredWords, dueForReview, accuracy, currentStreak: 0 };
+  const meta = metaSnap.exists() ? metaSnap.data() : null;
+  const lastStudied = meta?.lastStudiedDate;
+  const today = todayKey();
+  const yesterday = yesterdayKey();
+  const streakAlive = lastStudied === today || lastStudied === yesterday;
+  const currentStreak = streakAlive ? (meta?.currentStreak ?? 0) : 0;
+  return { totalWords, masteredWords, dueForReview, accuracy, currentStreak };
 }

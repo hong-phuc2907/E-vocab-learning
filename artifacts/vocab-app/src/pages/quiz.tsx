@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/lib/auth-context";
-import { listWords, reviewWord, type Word } from "@/lib/firestore";
+import { listWords, reviewWord, updateStreak, type Word } from "@/lib/firestore";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle2, XCircle, RefreshCw, GraduationCap } from "lucide-react";
@@ -73,6 +73,7 @@ export default function Quiz() {
     setAnswers((a) => [...a, correct]);
     setIsPending(true);
     await reviewWord(user.uid, currentQ.wordId, correct);
+    if (currentIndex === 0) updateStreak(user.uid);
     setIsPending(false);
   };
 
