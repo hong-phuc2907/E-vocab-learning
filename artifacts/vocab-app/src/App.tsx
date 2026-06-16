@@ -2,7 +2,8 @@ import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
+import Login from "@/pages/login";
 import Home from "@/pages/home";
 import Study from "@/pages/study";
 import Quiz from "@/pages/quiz";
@@ -20,11 +21,32 @@ function Router() {
       <Route path="/quiz" component={Quiz} />
       <Route path="/words/new" component={WordNew} />
       <Route path="/words/:id">
-        {(params) => <WordDetail id={parseInt(params.id, 10)} />}
+        {(params) => <WordDetail id={params.id} />}
       </Route>
       <Route path="/words" component={Words} />
-      <Route component={NotFound} />
     </Switch>
+  );
+}
+
+function AppShell() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground text-lg">Đang tải...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
+  return (
+    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+      <Router />
+    </WouterRouter>
   );
 }
 
@@ -32,9 +54,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

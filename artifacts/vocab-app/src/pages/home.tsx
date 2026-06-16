@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { Layout } from "@/components/layout";
-import { useGetDailyWord, useGetStats } from "@workspace/api-client-react";
+import { useAuth } from "@/lib/auth-context";
+import { getDailyWord, getStats, type Word, type Stats } from "@/lib/firestore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, Brain, Flame, Target } from "lucide-react";
@@ -7,24 +9,36 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
-  const { data: dailyWord, isLoading: isLoadingDaily } = useGetDailyWord();
-  const { data: stats, isLoading: isLoadingStats } = useGetStats();
+  const { user } = useAuth();
+  const [dailyWord, setDailyWord] = useState<Word | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    setLoading(true);
+    Promise.all([getDailyWord(user.uid), getStats(user.uid)]).then(([w, s]) => {
+      setDailyWord(w);
+      setStats(s);
+      setLoading(false);
+    });
+  }, [user]);
 
   return (
     <Layout>
       <div className="space-y-8">
         <header>
-          <h1 className="text-4xl font-serif font-bold text-foreground">Welcome back</h1>
-          <p className="text-muted-foreground mt-2 text-lg">Continue building your vocabulary today.</p>
+          <h1 className="text-4xl font-serif font-bold text-foreground">Chào mừng trở lại</h1>
+          <p className="text-muted-foreground mt-2 text-lg">Tiếp tục xây dựng vốn từ vựng của bạn hôm nay.</p>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="bg-primary text-primary-foreground border-none">
             <CardHeader>
-              <CardTitle className="text-primary-foreground/80 text-sm font-medium uppercase tracking-wider">Word of the Day</CardTitle>
+              <CardTitle className="text-primary-foreground/80 text-sm font-medium uppercase tracking-wider">Từ trong ngày</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoadingDaily ? (
+              {loading ? (
                 <div className="space-y-3">
                   <Skeleton className="h-8 w-1/2 bg-primary-foreground/20" />
                   <Skeleton className="h-4 w-full bg-primary-foreground/20" />
@@ -38,24 +52,24 @@ export default function Home() {
                   <p className="text-lg leading-relaxed">{dailyWord.definition}</p>
                 </div>
               ) : (
-                <p>No word of the day available.</p>
+                <p>Chưa có từ nào. Hãy thêm từ vựng đầu tiên!</p>
               )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Study Queue</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Hàng chờ học</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center py-6">
-              {isLoadingStats ? (
+              {loading ? (
                 <Skeleton className="h-16 w-16 rounded-full" />
               ) : (
                 <>
-                  <div className="text-5xl font-bold text-accent mb-4">{stats?.dueForReview || 0}</div>
-                  <p className="text-muted-foreground mb-6">Words ready for review</p>
+                  <div className="text-5xl font-bold text-accent mb-4">{stats?.dueForReview ?? 0}</div>
+                  <p className="text-muted-foreground mb-6">Từ cần ôn tập</p>
                   <Button asChild className="w-full">
-                    <Link href="/study">Start Study Session</Link>
+                    <Link href="/study">Bắt đầu học</Link>
                   </Button>
                 </>
               )}
@@ -64,10 +78,10 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Mastered Words" value={stats?.masteredWords || 0} icon={Target} isLoading={isLoadingStats} />
-          <StatCard title="Current Streak" value={stats?.currentStreak || 0} suffix="days" icon={Flame} isLoading={isLoadingStats} />
-          <StatCard title="Total Words" value={stats?.totalWords || 0} icon={BookOpen} isLoading={isLoadingStats} />
-          <StatCard title="Accuracy" value={stats?.accuracy != null ? `${stats.accuracy}%` : "0%"} icon={Brain} isLoading={isLoadingStats} />
+          <StatCard title="Từ đã thành thạo" value={stats?.masteredWords ?? 0} icon={Target} isLoading={loading} />
+          <StatCard title="Chuỗi học" value={stats?.currentStreak ?? 0} suffix="ngày" icon={Flame} isLoading={loading} />
+          <StatCard title="Tổng số từ" value={stats?.totalWords ?? 0} icon={BookOpen} isLoading={loading} />
+          <StatCard title="Độ chính xác" value={stats != null ? `${stats.accuracy}%` : "0%"} icon={Brain} isLoading={loading} />
         </div>
       </div>
     </Layout>

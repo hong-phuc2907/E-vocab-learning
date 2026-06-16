@@ -1,16 +1,19 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
-import { Book, LayoutDashboard, BrainCircuit, GraduationCap, PlusCircle } from "lucide-react";
+import { Book, LayoutDashboard, BrainCircuit, GraduationCap, PlusCircle, LogOut } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { Button } from "@/components/ui/button";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const { user, logout } = useAuth();
 
   const navItems = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/study", label: "Study", icon: BrainCircuit },
-    { href: "/quiz", label: "Quiz", icon: GraduationCap },
-    { href: "/words", label: "Vocabulary", icon: Book },
-    { href: "/words/new", label: "Add Word", icon: PlusCircle },
+    { href: "/", label: "Tổng quan", icon: LayoutDashboard },
+    { href: "/study", label: "Học bài", icon: BrainCircuit },
+    { href: "/quiz", label: "Kiểm tra", icon: GraduationCap },
+    { href: "/words", label: "Từ vựng", icon: Book },
+    { href: "/words/new", label: "Thêm từ", icon: PlusCircle },
   ];
 
   return (
@@ -30,8 +33,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors ${
-                  isActive 
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" 
+                  isActive
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium"
                     : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 }`}
               >
@@ -41,6 +44,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
+        <div className="p-4 border-t border-sidebar-border">
+          <div className="flex items-center gap-3 px-3 py-2 mb-2">
+            {user?.photoURL && (
+              <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full" />
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.displayName}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive"
+            onClick={logout}
+          >
+            <LogOut className="w-4 h-4" />
+            Đăng xuất
+          </Button>
+        </div>
       </aside>
       <main className="flex-1 p-6 md:p-12 overflow-auto">
         <div className="max-w-5xl mx-auto">
