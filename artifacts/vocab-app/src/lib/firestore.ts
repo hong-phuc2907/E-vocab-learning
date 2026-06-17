@@ -2,7 +2,7 @@ import {
   collection,
   doc,
   addDoc,
-  updateDoc,
+  updateDoc
   deleteDoc,
   getDocs,
   getDoc,
@@ -150,21 +150,26 @@ export function checkMultiAnswer(
   );
 }
 
-export async function listWords(uid: string, opts?: { search?: string; difficulty?: string }): Promise<Word[]> {
-  const q = query(wordsCol(uid), orderBy("createdAt", "asc"));
-  const snap = await getDocs(q);
-  let words = snap.docs.map((d) => toWord(d.id, d.data()));
+export async function findDuplicate(
+  uid: string,
+  input: WordInput
+): Promise<Word | null> {
+  const snap = await getDocs(wordsCol(uid));
 
-  if (opts?.search) {
-    const s = opts.search.toLowerCase();
-    words = words.filter(
-      (w) => w.term.toLowerCase().includes(s) || w.definition.toLowerCase().includes(s)
-    );
+  const normalize = (s: string) =>
+    s.trim().toLowerCase();
+
+  for (const d of snap.docs) {
+    const w = toWord(d.id, d.data());
+
+    if (
+      normalize(w.term) === normalize(input.term)
+    ) {
+      return w;
+    }
   }
-  if (opts?.difficulty) {
-    words = words.filter((w) => w.difficulty === opts.difficulty);
-  }
-  return words;
+
+  return null;
 }
 
 export async function getWord(uid: string, wordId: string): Promise<Word | null> {
