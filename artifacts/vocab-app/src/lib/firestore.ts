@@ -55,22 +55,31 @@ export interface Word {
   id: string;
   term: string;
   definition: string;
+
+  synonyms?: string[];
+
   partOfSpeech?: string;
   example?: string;
   pronunciation?: string;
   category?: string;
   difficulty?: "easy" | "medium" | "hard";
+
   masteryLevel: number;
   reviewCount: number;
   correctCount: number;
+
   lastReviewedAt?: string | null;
   nextReviewAt?: string | null;
+
   createdAt: string;
 }
 
 export interface WordInput {
   term: string;
   definition: string;
+
+  synonyms?: string[];
+
   partOfSpeech?: string;
   example?: string;
   pronunciation?: string;
@@ -84,9 +93,11 @@ function wordsCol(uid: string) {
 
 function toWord(id: string, data: Record<string, any>): Word {
   return {
-    id,
-    term: data.term,
-    definition: data.definition,
+  id,
+  term: data.term,
+  definition: data.definition,
+
+  synonyms: data.synonyms ?? [],
     partOfSpeech: data.partOfSpeech ?? undefined,
     example: data.example ?? undefined,
     pronunciation: data.pronunciation ?? undefined,
@@ -107,12 +118,36 @@ function toWord(id: string, data: Record<string, any>): Word {
   };
 }
 
-function computeNextReview(masteryLevel: number): Date {
-  const intervals = [0, 1, 3, 7, 14, 30];
-  const days = intervals[Math.min(masteryLevel, 5)];
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d;
+export function normalizeAnswer(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+export function checkMultiAnswer(
+  input: string,
+  answers: string[]
+): boolean {
+  const userAnswers = input
+    .split(",")
+    .map((s) => normalizeAnswer(s))
+    .filter(Boolean)
+    .sort();
+
+  const correctAnswers = answers
+    .map((s) => normalizeAnswer(s))
+    .sort();
+
+  if (
+    userAnswers.length !== correctAnswers.length
+  ) {
+    return false;
+  }
+
+  return correctAnswers.every(
+    (v, i) => v === userAnswers[i]
+  );
 }
 
 export async function listWords(uid: string, opts?: { search?: string; difficulty?: string }): Promise<Word[]> {
