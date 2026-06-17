@@ -12,7 +12,7 @@ import { Trash2, Plus, Search, BookOpen } from "lucide-react";
 import { Link } from "wouter";
 
 const DIFF_LABELS: Record<string, string> = { easy: "Dễ", medium: "Trung bình", hard: "Khó" };
-const const POS_LABELS: Record<string,string> = {
+const  POS_LABELS: Record<string,string> = {
   noun: "Danh từ",
   verb: "Động từ",
   adjective: "Tính từ",
