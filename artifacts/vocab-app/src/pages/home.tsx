@@ -3,7 +3,17 @@ import { Layout } from "@/components/layout";
 import { useAuth } from "@/lib/auth-context";
 import { getStats, type Stats } from "@/lib/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BrainCircuit, GraduationCap, ListOrdered, PlusCircle, BarChart3, ArrowRight, Flame, Target, BookOpen, Zap } from "lucide-react";
+import {
+  BrainCircuit,
+  GraduationCap,
+  ListOrdered,
+  PlusCircle,
+  ArrowRight,
+  Flame,
+  Target,
+  BookOpen,
+  Zap,
+} from "lucide-react";
 import { Link } from "wouter";
 
 const featureCards = [
@@ -12,36 +22,36 @@ const featureCards = [
     title: "Học bài",
     desc: "Luyện từ vựng với thẻ lật thông minh",
     icon: BrainCircuit,
-    gradient: "from-blue-500 to-blue-600",
     bg: "bg-blue-50",
     text: "text-blue-600",
+    border: "border-blue-100",
   },
   {
     href: "/quiz",
     title: "Kiểm tra",
     desc: "4 lựa chọn, chọn đáp án đúng",
     icon: GraduationCap,
-    gradient: "from-violet-500 to-purple-600",
     bg: "bg-violet-50",
     text: "text-violet-600",
+    border: "border-violet-100",
   },
   {
     href: "/words",
     title: "Quản lý từ vựng",
     desc: "Xem, tìm kiếm và xóa từ vựng",
     icon: ListOrdered,
-    gradient: "from-emerald-500 to-green-600",
     bg: "bg-emerald-50",
     text: "text-emerald-600",
+    border: "border-emerald-100",
   },
   {
     href: "/words/new",
     title: "Thêm từ mới",
     desc: "Mở rộng vốn từ của bạn",
     icon: PlusCircle,
-    gradient: "from-orange-500 to-amber-500",
     bg: "bg-orange-50",
     text: "text-orange-600",
+    border: "border-orange-100",
   },
 ];
 
@@ -72,11 +82,19 @@ export default function Home() {
     <Layout>
       <div className="space-y-7">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            Xin chào, {firstName}! 👋
-          </h1>
-          <p className="text-muted-foreground mt-1">Hôm nay bạn muốn học gì nào?</p>
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold text-foreground">
+              Xin chào, {firstName}! 👋
+            </h1>
+            <p className="text-muted-foreground mt-1">Hôm nay bạn muốn học gì nào?</p>
+          </div>
+          {/* Mascot in header */}
+          <img
+            src="/mascot-nobg.png"
+            alt="Lexify mascot"
+            className="w-20 h-20 drop-shadow-md select-none"
+          />
         </div>
 
         <div className="grid grid-cols-3 gap-6">
@@ -88,7 +106,7 @@ export default function Home() {
                 <Link key={card.href} href={card.href}>
                   <div className="bg-card border border-border rounded-2xl p-5 cursor-pointer hover:shadow-md transition-all hover:-translate-y-0.5 group">
                     <div className="flex items-start justify-between mb-4">
-                      <div className={`w-12 h-12 rounded-xl ${card.bg} flex items-center justify-center`}>
+                      <div className={`w-12 h-12 rounded-xl ${card.bg} ${card.border} border flex items-center justify-center`}>
                         <card.icon className={`w-6 h-6 ${card.text}`} />
                       </div>
                       <div className={`w-8 h-8 rounded-full ${card.bg} flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity`}>
@@ -102,12 +120,16 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Quote */}
-            <div className="bg-primary/5 border border-primary/15 rounded-2xl px-5 py-4 flex gap-3 items-start">
-              <span className="text-xl mt-0.5">💡</span>
+            {/* Quote with mascot */}
+            <div className="bg-primary/5 border border-primary/15 rounded-2xl px-5 py-4 flex gap-4 items-center">
+              <img
+                src="/mascot-nobg.png"
+                alt=""
+                className="w-14 h-14 shrink-0 drop-shadow-sm"
+              />
               <div>
-                <p className="text-sm font-medium text-primary">{quote}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">— Câu nói truyền cảm hứng</p>
+                <p className="text-sm font-medium text-primary leading-relaxed">"{quote}"</p>
+                <p className="text-xs text-muted-foreground mt-0.5">— Câu nói truyền cảm hứng hôm nay</p>
               </div>
             </div>
           </div>
@@ -133,37 +155,13 @@ export default function Home() {
               </span>
             </div>
 
-            {/* Stats */}
+            {/* Stats list */}
             <div className="bg-card border border-border rounded-2xl divide-y divide-border overflow-hidden">
               {[
-                {
-                  icon: BookOpen,
-                  label: "Từ đã lưu",
-                  value: stats?.totalWords ?? 0,
-                  color: "text-blue-500",
-                  bg: "bg-blue-50",
-                },
-                {
-                  icon: Target,
-                  label: "Bài kiểm tra đã làm",
-                  value: stats?.masteredWords ?? 0,
-                  color: "text-violet-500",
-                  bg: "bg-violet-50",
-                },
-                {
-                  icon: Zap,
-                  label: "Độ chính xác TB",
-                  value: stats != null ? `${stats.accuracy}%` : "—",
-                  color: "text-emerald-500",
-                  bg: "bg-emerald-50",
-                },
-                {
-                  icon: Flame,
-                  label: "Chuỗi ngày học",
-                  value: stats != null ? `${stats.currentStreak} ngày` : "—",
-                  color: "text-orange-500",
-                  bg: "bg-orange-50",
-                },
+                { icon: BookOpen, label: "Từ đã lưu", value: stats?.totalWords ?? 0, color: "text-blue-500", bg: "bg-blue-50" },
+                { icon: Target, label: "Từ thành thạo", value: stats?.masteredWords ?? 0, color: "text-violet-500", bg: "bg-violet-50" },
+                { icon: Zap, label: "Độ chính xác TB", value: stats != null ? `${stats.accuracy}%` : "—", color: "text-emerald-500", bg: "bg-emerald-50" },
+                { icon: Flame, label: "Chuỗi ngày học", value: stats != null ? `${stats.currentStreak} ngày` : "—", color: "text-orange-500", bg: "bg-orange-50" },
               ].map((s) => (
                 <div key={s.label} className="flex items-center gap-3 px-4 py-3">
                   <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center shrink-0`}>
@@ -183,7 +181,7 @@ export default function Home() {
             <Link href="/study">
               <div className="bg-primary rounded-2xl p-4 cursor-pointer hover:bg-primary/90 transition-colors text-white">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium text-white/80">Cần ôn tập</span>
+                  <span className="text-sm font-medium text-white/80">Cần ôn tập hôm nay</span>
                   <ArrowRight className="w-4 h-4 text-white/60" />
                 </div>
                 {loading ? (

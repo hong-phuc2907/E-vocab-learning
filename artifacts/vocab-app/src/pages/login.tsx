@@ -1,5 +1,4 @@
 import { useAuth } from "@/lib/auth-context";
-import { BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Login() {
@@ -7,11 +6,15 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="w-full max-w-md space-y-8">
-        {/* Logo + branding */}
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl shadow-lg shadow-primary/30 mx-auto">
-            <BookOpen className="w-8 h-8 text-white" />
+      <div className="w-full max-w-md space-y-6">
+        {/* Mascot + branding */}
+        <div className="text-center space-y-2">
+          <div className="relative inline-block">
+            <img
+              src="/mascot-nobg.png"
+              alt="Lexify mascot"
+              className="w-32 h-32 mx-auto drop-shadow-xl"
+            />
           </div>
           <div>
             <h1 className="text-3xl font-bold text-foreground tracking-tight">Lexify</h1>
