@@ -149,7 +149,62 @@ export function checkMultiAnswer(
     (v, i) => v === userAnswers[i]
   );
 }
+function computeNextReview(masteryLevel: number): Date {
+  const intervals = [0, 1, 3, 7, 14, 30];
 
+  const days =
+    intervals[Math.min(masteryLevel, 5)];
+
+  const d = new Date();
+
+  d.setDate(d.getDate() + days);
+
+  return d;
+}
+
+export async function listWords(
+  uid: string,
+  opts?: {
+    search?: string;
+    difficulty?: string;
+  }
+): Promise<Word[]> {
+  const q = query(
+    wordsCol(uid),
+    orderBy("createdAt", "asc")
+  );
+
+  const snap = await getDocs(q);
+
+  let words = snap.docs.map((d) =>
+    toWord(d.id, d.data())
+  );
+
+  if (opts?.search) {
+    const s =
+      opts.search.toLowerCase();
+
+    words = words.filter(
+      (w) =>
+        w.term
+          .toLowerCase()
+          .includes(s) ||
+        w.definition
+          .toLowerCase()
+          .includes(s)
+    );
+  }
+
+  if (opts?.difficulty) {
+    words = words.filter(
+      (w) =>
+        w.difficulty ===
+        opts.difficulty
+    );
+  }
+
+  return words;
+}
 export async function findDuplicate(
   uid: string,
   input: WordInput
