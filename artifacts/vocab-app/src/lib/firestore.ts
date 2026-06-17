@@ -151,7 +151,6 @@ export function checkMultiAnswer(
 }
 
 export async function findDuplicate(
-export async function findDuplicate(
   uid: string,
   input: WordInput
 ): Promise<Word | null> {
