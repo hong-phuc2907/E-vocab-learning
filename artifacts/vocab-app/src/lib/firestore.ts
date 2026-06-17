@@ -151,6 +151,7 @@ export function checkMultiAnswer(
 }
 
 export async function findDuplicate(
+export async function findDuplicate(
   uid: string,
   input: WordInput
 ): Promise<Word | null> {
@@ -199,25 +200,7 @@ export async function getDailyWord(uid: string): Promise<Word | null> {
   return words[dayIndex % words.length];
 }
 
-export async function findDuplicate(uid: string, input: WordInput): Promise<Word | null> {
-  const snap = await getDocs(wordsCol(uid));
-  const normalise = (s: string) => s.trim().toLowerCase();
-  const termNorm = normalise(input.term);
-  const defNorm = normalise(input.definition);
-  const pos = input.partOfSpeech ?? "";
 
-  for (const d of snap.docs) {
-    const w = toWord(d.id, d.data());
-    if (
-      normalise(w.term) === termNorm &&
-      normalise(w.definition) === defNorm &&
-      (w.partOfSpeech ?? "") === pos
-    ) {
-      return w;
-    }
-  }
-  return null;
-}
 
 export async function createWord(uid: string, input: WordInput): Promise<Word> {
   const ref = await addDoc(wordsCol(uid), {
