@@ -12,10 +12,22 @@ import { Trash2, Plus, Search, BookOpen } from "lucide-react";
 import { Link } from "wouter";
 
 const DIFF_LABELS: Record<string, string> = { easy: "Dễ", medium: "Trung bình", hard: "Khó" };
-const POS_LABELS: Record<string, string> = {
-  noun: "Danh từ", verb: "Động từ", adjective: "Tính từ", adverb: "Trạng từ",
-  preposition: "Giới từ", conjunction: "Liên từ", pronoun: "Đại từ",
-  interjection: "Thán từ", phrase: "Cụm từ",
+const const POS_LABELS: Record<string,string> = {
+  noun: "Danh từ",
+  verb: "Động từ",
+  adjective: "Tính từ",
+  adverb: "Trạng từ",
+  preposition: "Giới từ",
+  conjunction: "Liên từ",
+  pronoun: "Đại từ",
+  interjection: "Thán từ",
+
+  phrase: "Cụm từ",
+  idiom: "Thành ngữ",
+  collocation: "Collocation",
+  expression: "Expression",
+  "phrasal-verb": "Phrasal Verb",
+  "compound-word": "Từ ghép",
 };
 
 function MasteryDots({ level }: { level: number }) {
