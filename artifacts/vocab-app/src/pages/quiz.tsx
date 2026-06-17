@@ -53,10 +53,16 @@ export default function Quiz() {
     const pool = shuffle(allWords).slice(0, 10);
     return pool.map((word) => {
   const distractors = shuffle(
+  [...new Set(
     allWords
-      .filter((w) => w.id !== word.id)
+      .filter(
+        (w) =>
+          w.id !== word.id &&
+          w.definition !== word.definition
+      )
       .map((w) => w.definition)
-  ).slice(0, 3);
+  )]
+).slice(0, 3);
 
   return {
     wordId: word.id,
