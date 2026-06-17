@@ -91,7 +91,7 @@ export default function Home() {
           </div>
           {/* Mascot in header */}
           <img
-            src="/mascot-nobg.png"
+            src="/mascot.png"
             alt="Lexify mascot"
             className="w-20 h-20 drop-shadow-md select-none"
           />
@@ -123,7 +123,7 @@ export default function Home() {
             {/* Quote with mascot */}
             <div className="bg-primary/5 border border-primary/15 rounded-2xl px-5 py-4 flex gap-4 items-center">
               <img
-                src="/mascot-nobg.png"
+                src="/mascot.png"
                 alt=""
                 className="w-14 h-14 shrink-0 drop-shadow-sm"
               />

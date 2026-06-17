@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle2, XCircle, RefreshCw, GraduationCap } from "lucide-react";
 import { Link } from "wouter";
+import { MascotCelebration } from "@/components/mascot-celebration";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -151,25 +152,30 @@ export default function Quiz() {
 
   if (done) {
     const pct = Math.round((score / questions.length) * 100);
-    const gradeKey = pct >= 90 ? "Excellent" : pct >= 70 ? "Good work" : pct >= 50 ? "Keep practicing" : "Needs work";
+    const celebMsg = pct >= 90 ? "Xuất sắc! 🏆" : pct >= 70 ? "Tốt lắm! 🎉" : pct >= 50 ? "Tiếp tục cố gắng! 💪" : "Cần luyện thêm! 📚";
     return (
       <Layout>
-        <div className="max-w-lg mx-auto flex flex-col items-center py-12 text-center space-y-6">
-          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-            <CheckCircle2 className="w-10 h-10 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-3xl font-serif font-bold">{GRADE_LABELS[gradeKey]}!</h2>
-            <p className="text-muted-foreground mt-2">Bạn đạt {score}/{questions.length} câu đúng</p>
-          </div>
-          <div className="text-5xl font-bold text-primary">{pct}%</div>
+        <div className="max-w-lg mx-auto flex flex-col items-center py-10 text-center space-y-6">
+          <MascotCelebration
+            message={celebMsg}
+            subMessage={`Bạn đạt ${score}/${questions.length} câu đúng`}
+          />
+
+          <div className="text-6xl font-bold text-primary">{pct}%</div>
+
           <div className="flex gap-2 flex-wrap justify-center">
             {answers.map((correct, i) => (
-              <div key={i} className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+              <div
+                key={i}
+                className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${
+                  correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                }`}
+              >
                 {i + 1}
               </div>
             ))}
           </div>
+
           <div className="flex gap-3">
             <Button variant="outline" onClick={handleRestart}>
               <RefreshCw className="w-4 h-4 mr-2" /> Làm lại

@@ -11,7 +11,7 @@ export default function Login() {
         <div className="text-center space-y-2">
           <div className="relative inline-block">
             <img
-              src="/mascot-nobg.png"
+              src="/mascot.png"
               alt="Lexify mascot"
               className="w-32 h-32 mx-auto drop-shadow-xl"
             />

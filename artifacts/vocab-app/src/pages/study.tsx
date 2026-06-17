@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
+import { MascotCelebration } from "@/components/mascot-celebration";
 
 function MasteryDots({ level }: { level: number }) {
   return (
@@ -99,30 +100,32 @@ export default function Study() {
 
   if (done) {
     const accuracy = sessionTotal > 0 ? Math.round((sessionCorrect / sessionTotal) * 100) : 0;
+    const celebMsg = accuracy >= 90 ? "Xuất sắc! 🏆" : accuracy >= 70 ? "Làm tốt lắm! 🎉" : "Cố gắng lên! 💪";
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
-          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-            <CheckCircle2 className="w-10 h-10 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-3xl font-serif font-bold">Hoàn thành buổi học!</h2>
-            <p className="text-muted-foreground mt-2">Bạn đã ôn tập {sessionTotal} từ</p>
-          </div>
-          <div className="flex gap-8 text-center">
+          <MascotCelebration
+            message={celebMsg}
+            subMessage={`Bạn đã ôn tập ${sessionTotal} từ trong buổi học này`}
+          />
+
+          <div className="flex gap-6 text-center bg-card border border-border rounded-2xl px-10 py-5">
             <div>
               <p className="text-4xl font-bold text-primary">{accuracy}%</p>
               <p className="text-sm text-muted-foreground mt-1">Độ chính xác</p>
             </div>
+            <div className="w-px bg-border" />
             <div>
-              <p className="text-4xl font-bold text-primary">{sessionCorrect}</p>
+              <p className="text-4xl font-bold text-green-600">{sessionCorrect}</p>
               <p className="text-sm text-muted-foreground mt-1">Đúng</p>
             </div>
+            <div className="w-px bg-border" />
             <div>
               <p className="text-4xl font-bold text-muted-foreground">{sessionTotal - sessionCorrect}</p>
               <p className="text-sm text-muted-foreground mt-1">Cần học thêm</p>
             </div>
           </div>
+
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => { load(); setCurrentIndex(0); setFlipped(false); setDone(false); setSessionCorrect(0); setSessionTotal(0); }}>
               <RefreshCw className="w-4 h-4 mr-2" /> Học lại
