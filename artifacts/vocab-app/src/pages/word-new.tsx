@@ -10,8 +10,46 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Plus, AlertCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { listWords } from "@/lib/firestore";
 
 export default function WordNew() {
+  useEffect(() => {
+  if (!user) return;
+
+  listWords(user.uid).then(setAllWords);
+}, [user]);
+  const handleCopyWord = (wordId: string) => {
+
+  const source = allWords.find(
+    w => w.id === wordId
+  );
+
+  if (!source) return;
+
+  setForm(f => ({
+    ...f,
+
+    definition:
+      source.definition,
+
+    example:
+      source.example || "",
+
+    pronunciation:
+      source.pronunciation || "",
+
+    partOfSpeech:
+      source.partOfSpeech || "",
+
+    category:
+      source.category || "",
+
+    difficulty:
+      source.difficulty || "medium"
+  }));
+};
+  const [allWords, setAllWords] = useState<Word[]>([]);
+const [copyWordId, setCopyWordId] = useState("");
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [isPending, setIsPending] = useState(false);
@@ -48,6 +86,7 @@ export default function WordNew() {
       definition: form.definition.trim(),
       difficulty: form.difficulty,
     };
+    
     if (form.partOfSpeech) input.partOfSpeech = form.partOfSpeech;
     if (form.example) input.example = form.example;
     if (form.pronunciation) input.pronunciation = form.pronunciation;
