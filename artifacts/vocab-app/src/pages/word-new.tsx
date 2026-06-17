@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/lib/auth-context";
-import { createWord } from "@/lib/firestore";
+import { createWord, findDuplicate, type Word } from "@/lib/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, AlertCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 export default function WordNew() {
@@ -27,12 +27,14 @@ export default function WordNew() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [duplicate, setDuplicate] = useState<Word | null>(null);
 
   const set = (key: keyof typeof form) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setDuplicate(null);
     const newErrors: Record<string, string> = {};
     if (!form.term.trim()) newErrors.term = "Vui lòng nhập từ";
     if (!form.definition.trim()) newErrors.definition = "Vui lòng nhập nghĩa";
@@ -40,6 +42,7 @@ export default function WordNew() {
     if (!user) return;
 
     setIsPending(true);
+
     const input: Record<string, string> = {
       term: form.term.trim(),
       definition: form.definition.trim(),
@@ -49,6 +52,13 @@ export default function WordNew() {
     if (form.example) input.example = form.example;
     if (form.pronunciation) input.pronunciation = form.pronunciation;
     if (form.category) input.category = form.category;
+
+    const dup = await findDuplicate(user.uid, input as any);
+    if (dup) {
+      setDuplicate(dup);
+      setIsPending(false);
+      return;
+    }
 
     await createWord(user.uid, input as any);
     setIsPending(false);
@@ -164,9 +174,25 @@ export default function WordNew() {
             </CardContent>
           </Card>
 
+          {duplicate && (
+            <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-800">Từ này đã tồn tại trong danh sách của bạn</p>
+                <p className="text-xs text-amber-700 mt-1">
+                  "<strong>{duplicate.term}</strong>" với nghĩa "{duplicate.definition}"
+                  {duplicate.partOfSpeech ? ` (${duplicate.partOfSpeech})` : ""} đã được thêm trước đó.
+                </p>
+                <Link href={`/words/${duplicate.id}`} className="text-xs text-amber-800 underline mt-1 inline-block">
+                  Xem từ đã có →
+                </Link>
+              </div>
+            </div>
+          )}
+
           <Button type="submit" className="w-full mt-4" size="lg" disabled={isPending}>
             <Plus className="w-4 h-4 mr-2" />
-            {isPending ? "Đang thêm..." : "Thêm từ"}
+            {isPending ? "Đang kiểm tra..." : "Thêm từ"}
           </Button>
         </form>
       </div>
