@@ -52,8 +52,20 @@ export default function Quiz() {
     if (!allWords || allWords.length < 2 || !started) return [];
     const pool = shuffle(allWords).slice(0, 10);
     return pool.map((word) => {
-      const distractors = shuffle(allWords.filter((w) => w.id !== word.id)).slice(0, 3).map((w) => w.definition);
-      return {
+      const distractors = [
+  ...new Set(
+    shuffle(
+      allWords
+        .filter((w) => w.id !== word.id)
+        .map((w) => w.definition.trim())
+        .filter(
+          (d) =>
+            d.toLowerCase() !==
+            word.definition.trim().toLowerCase()
+        )
+    )
+  ),
+].slice(0, 3);
         wordId: word.id,
         term: word.term,
         correctDefinition: word.definition,
