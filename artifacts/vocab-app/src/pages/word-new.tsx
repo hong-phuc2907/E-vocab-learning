@@ -82,7 +82,7 @@ export default function WordNew() {
     setForm((f) => ({ ...f, [key]: value }));
   };
 
-  // HÀM CHỐNG CRASH: Chuyển đổi an toàn mọi kiểu dữ liệu của loại từ thành Mảng chuẩn
+  // CHỐT CHẶN 1: Ép kiểu an toàn cho loại từ, ngăn chặn hoàn toàn lỗi sập giao diện (.split / .includes)
   const parsePartsOfSpeech = (val: any): string[] => {
     if (!val) return [];
     if (Array.isArray(val)) return val.map(v => String(v).trim());
@@ -90,7 +90,6 @@ export default function WordNew() {
     return [];
   };
 
-  // Hàm xử lý tick/bỏ tick bằng mảng sạch hoàn toàn
   const handleTogglePos = (posValue: string) => {
     const currentParts = parsePartsOfSpeech(form.partOfSpeech);
     let newParts: string[];
@@ -111,75 +110,13 @@ export default function WordNew() {
     const source = allWords.find((w) => w.id === wordId);
     if (!source) return;
 
-    // Ép kiểu an toàn khi lấy loại từ từ cơ sở dữ liệu cũ về form
     const rawPos = source.partOfSpeech;
     const cleanPos = Array.isArray(rawPos) ? rawPos.join(", ") : String(rawPos || "");
 
     setForm((f) => ({
       ...f,
-      definition: source.definition || "",
-      example: source.example || "",
-      pronunciation: source.pronunciation || "",
-      partOfSpeech: cleanPos,
-      category: source.category || "",
-      difficulty: source.difficulty || "medium",
-    }));
-  };
-
-  const filteredWords = allWords.filter((w) => {
-    const query = searchQuery.toLowerCase().trim();
-    return (
-      w.term.toLowerCase().includes(query) ||
-      (w.definition && w.definition.toLowerCase().includes(query))
-    );
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-
-    setDuplicate(null);
-    setErrors({});
-    setIsPending(true);
-
-    const newErrors: Record<string, string> = {};
-    if (!form.term || !form.term.trim()) newErrors.term = "Vui lòng nhập từ tiếng Anh";
-    if (!form.definition || !form.definition.trim()) newErrors.definition = "Vui lòng nhập nghĩa của từ";
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      setIsPending(false);
-      return;
-    }
-
-    try {
-      const input: any = {
-        term: form.term.trim(),
-        definition: form.definition.trim(),
-        difficulty: form.difficulty,
-      };
-
-      if (form.partOfSpeech && form.partOfSpeech.trim()) input.partOfSpeech = form.partOfSpeech.trim();
-      if (form.example && form.example.trim()) input.example = form.example.trim();
-      if (form.pronunciation && form.pronunciation.trim()) input.pronunciation = form.pronunciation.trim();
-      if (form.category && form.category.trim()) input.category = form.category.trim();
-
-      const dup = await findDuplicate(user.uid, input);
-      if (dup) {
-        setDuplicate(dup);
-        setIsPending(false);
-        return;
-      }
-
-      await createWord(user.uid, input);
-      window.location.href = "/words";
-    } catch (error) {
-      console.error("Lỗi hệ thống khi thêm từ:", error);
-      setErrors({
-        submit: "Hệ thống gặp sự cố khi lưu dữ liệu. Vui lòng thử lại.",
-      });
-      setIsPending(false);
-        return (
+      definition: source.definition ||
+          return (
     <Layout>
       <div className="max-w-2xl mx-auto space-y-6 p-4">
         <div className="flex items-center justify-between">
@@ -189,7 +126,7 @@ export default function WordNew() {
           <h1 className="text-xl font-bold tracking-tight">Thêm từ vựng mới</h1>
         </div>
 
-        {/* Ô TÌM KIẾM ĐỂ COPY NGHĨA TỪ CŨ */}
+        {/* Ô TRA CỨU ĐỂ SAO CHÉP NGHĨA */}
         {allWords.length > 0 && (
           <Card className="border-dashed border-primary/40 bg-primary/5">
             <CardContent className="pt-6 space-y-3">
@@ -215,7 +152,7 @@ export default function WordNew() {
                   ) : (
                     filteredWords.map((word) => (
                       <div
-                        key={word.id}
+                        key={word.id || word.term}
                         className="p-2.5 flex items-center justify-between text-sm hover:bg-muted/50 transition-colors"
                       >
                         <div className="truncate pr-3">
@@ -246,7 +183,7 @@ export default function WordNew() {
           </Card>
         )}
 
-        {/* FORM CHÍNH THÊM TỪ VỰNG */}
+        {/* FORM CHÍNH NHẬP LIỆU */}
         <Card>
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -280,7 +217,6 @@ export default function WordNew() {
                   </Label>
                   <div className="flex flex-wrap gap-2">
                     {POS_OPTIONS.map((pos) => {
-                      // Gọi hàm an toàn để kiểm tra trạng thái sáng/tối của nút bấm
                       const isSelected = parsePartsOfSpeech(form.partOfSpeech).includes(pos.value);
                       return (
                         <button
@@ -387,7 +323,4 @@ export default function WordNew() {
     </Layout>
   );
     }
-    
-    }
-  };
-  
+                    
