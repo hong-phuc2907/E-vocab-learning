@@ -78,11 +78,11 @@ export default function WordNew() {
     );
   }
 
-  const set = (key: keyof typeof form) => (value: string) => {
+  // ĐÃ SỬA: Thay đổi value sang kiểu any để tương thích với trường độ khó (difficulty), không lo bị lỗi crash compile
+  const set = (key: keyof typeof form) => (value: any) => {
     setForm((f) => ({ ...f, [key]: value }));
   };
 
-  // CHỐT CHẶN 1: Ép kiểu an toàn cho loại từ, ngăn chặn hoàn toàn lỗi sập giao diện (.split / .includes)
   const parsePartsOfSpeech = (val: any): string[] => {
     if (!val) return [];
     if (Array.isArray(val)) return val.map(v => String(v).trim());
@@ -115,8 +115,74 @@ export default function WordNew() {
 
     setForm((f) => ({
       ...f,
-      definition: source.definition ||
-          return (
+      definition: source.definition || "",
+      example: source.example || "",
+      pronunciation: source.pronunciation || "",
+      partOfSpeech: cleanPos,
+      category: source.category || "",
+      difficulty: source.difficulty || "medium",
+    }));
+  };
+
+  const filteredWords = allWords.filter((w) => {
+    if (!w || !w.term || typeof w.term !== "string") return false; 
+    
+    const query = searchQuery ? searchQuery.toLowerCase().trim() : "";
+    const termMatch = w.term.toLowerCase().includes(query);
+    const defMatch = w.definition && typeof w.definition === "string" 
+      ? w.definition.toLowerCase().includes(query) 
+      : false;
+      
+    return termMatch || defMatch;
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setDuplicate(null);
+    setErrors({});
+    setIsPending(true);
+
+    const newErrors: Record<string, string> = {};
+    if (!form.term || !form.term.trim()) newErrors.term = "Vui lòng nhập từ tiếng Anh";
+    if (!form.definition || !form.definition.trim()) newErrors.definition = "Vui lòng nhập nghĩa của từ";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setIsPending(false);
+      return;
+    }
+
+    try {
+      const input: any = {
+        term: form.term.trim(),
+        definition: form.definition.trim(),
+        difficulty: form.difficulty,
+      };
+
+      if (form.partOfSpeech && form.partOfSpeech.trim()) input.partOfSpeech = form.partOfSpeech.trim();
+      if (form.example && form.example.trim()) input.example = form.example.trim();
+      if (form.pronunciation && form.pronunciation.trim()) input.pronunciation = form.pronunciation.trim();
+      if (form.category && form.category.trim()) input.category = form.category.trim();
+
+      const dup = await findDuplicate(user.uid, input);
+      if (dup) {
+        setDuplicate(dup);
+        setIsPending(false);
+        return;
+      }
+
+      await createWord(user.uid, input);
+      window.location.href = "/words";
+    } catch (error) {
+      console.error("Lỗi hệ thống khi thêm từ:", error);
+      setErrors({
+        submit: "Hệ thống gặp sự cố khi lưu dữ liệu. Vui lòng thử lại.",
+      });
+      setIsPending(false);
+    }
+  };  return (
     <Layout>
       <div className="max-w-2xl mx-auto space-y-6 p-4">
         <div className="flex items-center justify-between">
@@ -322,5 +388,6 @@ export default function WordNew() {
       </div>
     </Layout>
   );
-    }
-                    
+}
+
+  
