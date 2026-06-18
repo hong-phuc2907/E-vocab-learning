@@ -23,7 +23,22 @@ interface QuizQuestion {
   correctDefinition: string;
   options: string[];
 }
+type QuizMode =
+  | "multiple-choice"
+  | "fill-all"
+  | "multi-select"
+  | "mixed";
 
+interface QuizQuestion {
+  wordId: string;
+  term: string;
+  correctDefinition: string;
+  options: string[];
+
+  type?: QuizMode;
+
+  correctWords?: string[];
+}
 const GRADE_LABELS: Record<string, string> = {
   Excellent: "Xuất sắc",
   "Good work": "Tốt lắm",
@@ -42,6 +57,17 @@ export default function Quiz() {
   const [done, setDone] = useState(false);
   const [answers, setAnswers] = useState<boolean[]>([]);
   const [isPending, setIsPending] = useState(false);
+  const [quizMode, setQuizMode] =
+  useState<QuizMode>("multiple-choice");
+
+const [questionCount, setQuestionCount] =
+  useState(10);
+
+const [textAnswer, setTextAnswer] =
+  useState("");
+
+const [selectedWords, setSelectedWords] =
+  useState<string[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -50,7 +76,14 @@ export default function Quiz() {
 
   const questions = useMemo<QuizQuestion[]>(() => {
     if (!allWords || allWords.length < 2 || !started) return [];
-    const pool = shuffle(allWords).slice(0, 10);
+    const pool = shuffle(allWords)
+  .slice(
+    0,
+    Math.min(
+      questionCount,
+      allWords.length
+    )
+  );
     return pool.map((word) => {
   const distractors = shuffle(
   [...new Set(
@@ -64,15 +97,45 @@ export default function Quiz() {
   )]
 ).slice(0, 3);
 
-  return {
-    wordId: word.id,
-    term: word.term,
-    correctDefinition: word.definition,
-    options: shuffle([
-      word.definition,
-      ...distractors,
-    ]),
-  };
+  const synonyms =
+  word.synonyms ?? [];
+
+const correctWords =
+  [word.term, ...synonyms];
+
+let type: QuizMode = quizMode;
+
+if (quizMode === "mixed") {
+  const modes = [
+    "multiple-choice",
+    "fill-all",
+    "multi-select",
+  ];
+
+  type =
+    modes[
+      Math.floor(
+        Math.random() *
+          modes.length
+      )
+    ] as QuizMode;
+}
+
+return {
+  wordId: word.id,
+  term: word.term,
+  correctDefinition:
+    word.definition,
+
+  options: shuffle([
+    word.definition,
+    ...distractors,
+  ]),
+
+  type,
+
+  correctWords,
+};
 });
   }, [allWords, started]);
 
@@ -156,6 +219,51 @@ export default function Quiz() {
               <p>Lựa chọn</p>
             </div>
           </div>
+          <div className="w-full max-w-md space-y-3">
+
+  <select
+    className="w-full border rounded-lg p-2"
+    value={quizMode}
+    onChange={(e) =>
+      setQuizMode(
+        e.target.value as QuizMode
+      )
+    }
+  >
+    <option value="multiple-choice">
+      Chọn đáp án đúng
+    </option>
+
+    <option value="fill-all">
+      Điền tất cả từ đúng
+    </option>
+
+    <option value="multi-select">
+      Chọn tất cả từ đúng
+    </option>
+
+    <option value="mixed">
+      Kết hợp
+    </option>
+  </select>
+
+  <select
+    className="w-full border rounded-lg p-2"
+    value={questionCount}
+    onChange={(e) =>
+      setQuestionCount(
+        Number(e.target.value)
+      )
+    }
+  >
+    <option value={10}>10 câu</option>
+    <option value={20}>20 câu</option>
+    <option value={30}>30 câu</option>
+    <option value={50}>50 câu</option>
+    <option value={100}>100 câu</option>
+  </select>
+
+</div>
           <Button size="lg" className="w-full max-w-xs" onClick={() => setStarted(true)}>
             Bắt đầu kiểm tra
           </Button>
