@@ -21,8 +21,16 @@ import {
 } from "@/components/ui/select";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Plus, AlertCircle, Copy } from "lucide-react";
+import { ArrowLeft, Plus, AlertCircle, Copy, Check, Search } from "lucide-react";
 import { Link, useLocation } from "wouter";
+
+const POS_OPTIONS = [
+  { value: "Noun", label: "Danh từ" },
+  { value: "Verb", label: "Động từ" },
+  { value: "Adjective", label: "Tính từ" },
+  { value: "Adverb", label: "Trạng từ" },
+  { value: "Idiom", label: "Thành ngữ" }
+];
 
 export default function WordNew() {
   const { user } = useAuth();
@@ -30,7 +38,9 @@ export default function WordNew() {
 
   const [isPending, setIsPending] = useState(false);
   const [allWords, setAllWords] = useState<Word[]>([]);
-  const [copyWordId, setCopyWordId] = useState("");
+  
+  // State phục vụ tính năng tìm kiếm từ cũ để copy nghĩa
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [form, setForm] = useState({
     term: "",
@@ -74,6 +84,17 @@ export default function WordNew() {
     setForm((f) => ({ ...f, [key]: value }));
   };
 
+  const handleTogglePos = (posValue: string) => {
+    const currentArray = form.partOfSpeech ? form.partOfSpeech.split(", ") : [];
+    if (currentArray.includes(posValue)) {
+      const newArray = currentArray.filter(item => item !== posValue);
+      set("partOfSpeech")(newArray.join(", "));
+    } else {
+      set("partOfSpeech")([...currentArray, posValue].join(", "));
+    }
+  };
+
+  // Logic sao chép nghĩa từ một từ vựng được tìm thấy
   const handleCopyWord = (wordId: string) => {
     const source = allWords.find((w) => w.id === wordId);
     if (!source) return;
@@ -87,6 +108,15 @@ export default function WordNew() {
       difficulty: source.difficulty || "medium",
     }));
   };
+
+  // Lọc danh sách từ vựng theo nội dung người dùng nhập vào ô tìm kiếm
+  const filteredWords = allWords.filter((w) => {
+    const query = searchQuery.toLowerCase().trim();
+    return (
+      w.term.toLowerCase().includes(query) ||
+      (w.definition && w.definition.toLowerCase().includes(query))
+    );
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,10 +156,7 @@ export default function WordNew() {
       }
 
       await createWord(user.uid, input);
-      
-      // SỬA LỖI MÀN HÌNH TRẮNG: Điều hướng cưỡng bức cứng bằng trình duyệt để tránh crash router nội bộ
       window.location.href = "/words";
-      
     } catch (error) {
       console.error("Lỗi hệ thống khi thêm từ:", error);
       setErrors({
@@ -137,8 +164,7 @@ export default function WordNew() {
       });
       setIsPending(false);
     }
-  };
-    return (
+  };  return (
     <Layout>
       <div className="max-w-2xl mx-auto space-y-6 p-4">
         <div className="flex items-center justify-between">
@@ -148,38 +174,63 @@ export default function WordNew() {
           <h1 className="text-xl font-bold tracking-tight">Thêm từ vựng mới</h1>
         </div>
 
+        {/* Ô TÌM KIẾM ĐỂ COPY NGHĨA TỪ CŨ */}
         {allWords.length > 0 && (
-          <Card>
-            <CardContent className="pt-6 space-y-4">
+          <Card className="border-dashed border-primary/40 bg-primary/5">
+            <CardContent className="pt-6 space-y-3">
               <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="copy-word">Sao chép nhanh từ định nghĩa cũ</Label>
-                <div className="flex gap-2">
-                  <Select value={copyWordId} onValueChange={setCopyWordId}>
-                    <SelectTrigger id="copy-word" className="w-full">
-                      <SelectValue placeholder="Chọn từ muốn sao chép thông tin..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allWords.map((word) => (
-                        <SelectItem key={word.id} value={word.id || ""}>
-                          {word.term} ({word.partOfSpeech || "chưa phân loại"})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => handleCopyWord(copyWordId)}
-                    disabled={!copyWordId}
-                  >
-                    <Copy className="w-4 h-4 mr-2" /> Sao chép
-                  </Button>
-                </div>
+                <Label htmlFor="search-word" className="text-primary font-medium flex items-center gap-1.5">
+                  <Search className="w-4 h-4" /> Tra cứu nhanh từ vựng cũ để sao chép nghĩa
+                </Label>
+                <Input
+                  id="search-word"
+                  placeholder="Gõ từ tiếng Anh hoặc nghĩa tiếng Việt để tra nhanh..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-background"
+                />
               </div>
+
+              {/* Hộp danh sách kết quả tìm kiếm */}
+              {searchQuery.trim() !== "" && (
+                <div className="border rounded-md max-h-44 overflow-y-auto divide-y bg-background shadow-inner">
+                  {filteredWords.length === 0 ? (
+                    <div className="p-3 text-sm text-muted-foreground text-center">
+                      Không tìm thấy từ nào khớp với nội dung tra cứu
+                    </div>
+                  ) : (
+                    filteredWords.map((word) => (
+                      <div
+                        key={word.id}
+                        className="p-2.5 flex items-center justify-between text-sm hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="truncate pr-3">
+                          <span className="font-semibold text-foreground">{word.term}</span>{" "}
+                          <span className="text-xs text-muted-foreground italic">({word.partOfSpeech || "chưa rõ loại"})</span>
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">{word.definition}</p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="h-8 flex-shrink-0 font-medium text-xs gap-1"
+                          onClick={() => {
+                            handleCopyWord(word.id || "");
+                            setSearchQuery(""); // Copy xong tự động xóa trống ô tìm kiếm cho gọn
+                          }}
+                        >
+                          <Copy className="w-3 h-3" /> Sao chép
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
 
+        {/* FORM CHÍNH THÊM TỪ VỰNG */}
         <Card>
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -188,7 +239,7 @@ export default function WordNew() {
                 <Label htmlFor="term">Từ vựng tiếng Anh <span className="text-destructive">*</span></Label>
                 <Input
                   id="term"
-                  placeholder="Ví dụ: Ephemeral, Serendipity..."
+                  placeholder="Ví dụ: Ephemeral, Break a leg..."
                   value={form.term}
                   onChange={(e) => set("term")(e.target.value)}
                   className={errors.term ? "border-destructive" : ""}
@@ -196,7 +247,7 @@ export default function WordNew() {
                 {errors.term && <p className="text-xs text-destructive">{errors.term}</p>}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-1.5">
                   <Label htmlFor="pronunciation" className="text-muted-foreground">Phiên âm <span className="text-xs font-normal">(Tùy chọn)</span></Label>
                   <Input
@@ -206,14 +257,31 @@ export default function WordNew() {
                     onChange={(e) => set("pronunciation")(e.target.value)}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="partOfSpeech" className="text-muted-foreground">Từ loại <span className="text-xs font-normal">(Tùy chọn)</span></Label>
-                  <Input
-                    id="partOfSpeech"
-                    placeholder="Ví dụ: Noun, Verb, Adj..."
-                    value={form.partOfSpeech}
-                    onChange={(e) => set("partOfSpeech")(e.target.value)}
-                  />
+                
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">
+                    Từ loại / Dạng từ <span className="text-xs font-normal">(Có thể chọn nhiều)</span>
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {POS_OPTIONS.map((pos) => {
+                      const isSelected = form.partOfSpeech.split(", ").includes(pos.value);
+                      return (
+                        <button
+                          key={pos.value}
+                          type="button"
+                          onClick={() => handleTogglePos(pos.value)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 ${
+                            isSelected 
+                              ? "bg-primary text-primary-foreground border-primary shadow-sm" 
+                              : "bg-background text-muted-foreground border-border hover:bg-muted"
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3 h-3" />}
+                          {pos.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
