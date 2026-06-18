@@ -47,10 +47,9 @@ export default function WordNew() {
 
   useEffect(() => {
     if (!user) return;
-    listWords(user.uid).then(setAllWords);
+    listWords(user.uid).then(setAllWords).catch(console.error);
   }, [user]);
 
-  // Chống màn hình trắng khi Firebase đang xác thực tài khoản
   if (user === undefined) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -59,7 +58,6 @@ export default function WordNew() {
     );
   }
 
-  // Chống lỗi ngầm khi chưa đăng nhập
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-3 p-4">
@@ -73,17 +71,12 @@ export default function WordNew() {
   }
 
   const set = (key: keyof typeof form) => (value: string) => {
-    setForm((f) => ({
-      ...f,
-      [key]: value,
-    }));
+    setForm((f) => ({ ...f, [key]: value }));
   };
 
   const handleCopyWord = (wordId: string) => {
     const source = allWords.find((w) => w.id === wordId);
-
     if (!source) return;
-
     setForm((f) => ({
       ...f,
       definition: source.definition || "",
@@ -97,31 +90,23 @@ export default function WordNew() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!user) return;
 
     setDuplicate(null);
     setErrors({});
+    setIsPending(true);
 
     const newErrors: Record<string, string> = {};
-
-    if (!form.term || !form.term.trim()) {
-      newErrors.term = "Vui lòng nhập từ tiếng Anh";
-    }
-
-    if (!form.definition || !form.definition.trim()) {
-      newErrors.definition = "Vui lòng nhập nghĩa của từ";
-    }
+    if (!form.term || !form.term.trim()) newErrors.term = "Vui lòng nhập từ tiếng Anh";
+    if (!form.definition || !form.definition.trim()) newErrors.definition = "Vui lòng nhập nghĩa của từ";
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setIsPending(false);
       return;
     }
 
-    setIsPending(true);
-
     try {
-      // Xử lý chuỗi an toàn: Nếu trống thì loại bỏ hoàn toàn thuộc tính để Firestore không báo lỗi loại dữ liệu
       const input: any = {
         term: form.term.trim(),
         definition: form.definition.trim(),
@@ -134,7 +119,6 @@ export default function WordNew() {
       if (form.category && form.category.trim()) input.category = form.category.trim();
 
       const dup = await findDuplicate(user.uid, input);
-
       if (dup) {
         setDuplicate(dup);
         setIsPending(false);
@@ -142,20 +126,21 @@ export default function WordNew() {
       }
 
       await createWord(user.uid, input);
-      navigate("/words");
+      
+      // SỬA LỖI MÀN HÌNH TRẮNG: Điều hướng cưỡng bức cứng bằng trình duyệt để tránh crash router nội bộ
+      window.location.href = "/words";
+      
     } catch (error) {
-      console.error("Lỗi chi tiết từ hệ thống:", error);
+      console.error("Lỗi hệ thống khi thêm từ:", error);
       setErrors({
-        submit: "Không thể thêm từ vựng. Vui lòng thử lại.",
+        submit: "Hệ thống gặp sự cố khi lưu dữ liệu. Vui lòng thử lại.",
       });
-    } finally {
       setIsPending(false);
     }
   };
     return (
     <Layout>
       <div className="max-w-2xl mx-auto space-y-6 p-4">
-        {/* Tiêu đề & Nút quay lại */}
         <div className="flex items-center justify-between">
           <Link href="/words" className="flex items-center text-sm text-muted-foreground hover:text-foreground gap-1">
             <ArrowLeft className="w-4 h-4" /> Quay lại danh sách
@@ -163,7 +148,6 @@ export default function WordNew() {
           <h1 className="text-xl font-bold tracking-tight">Thêm từ vựng mới</h1>
         </div>
 
-        {/* Tính năng Sao chép nhanh từ đã có */}
         {allWords.length > 0 && (
           <Card>
             <CardContent className="pt-6 space-y-4">
@@ -196,12 +180,10 @@ export default function WordNew() {
           </Card>
         )}
 
-        {/* Form nhập liệu chính */}
         <Card>
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-4">
               
-              {/* Từ vựng - BẮT BUỘC */}
               <div className="space-y-1.5">
                 <Label htmlFor="term">Từ vựng tiếng Anh <span className="text-destructive">*</span></Label>
                 <Input
@@ -214,7 +196,6 @@ export default function WordNew() {
                 {errors.term && <p className="text-xs text-destructive">{errors.term}</p>}
               </div>
 
-              {/* Phiên âm & Từ loại - KHÔNG BẮT BUỘC */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="pronunciation" className="text-muted-foreground">Phiên âm <span className="text-xs font-normal">(Tùy chọn)</span></Label>
@@ -236,7 +217,6 @@ export default function WordNew() {
                 </div>
               </div>
 
-              {/* Định nghĩa - BẮT BUỘC */}
               <div className="space-y-1.5">
                 <Label htmlFor="definition">Định nghĩa / Nghĩa của từ <span className="text-destructive">*</span></Label>
                 <Textarea
@@ -249,7 +229,6 @@ export default function WordNew() {
                 {errors.definition && <p className="text-xs text-destructive">{errors.definition}</p>}
               </div>
 
-              {/* Ví dụ minh họa - KHÔNG BẮT BUỘC */}
               <div className="space-y-1.5">
                 <Label htmlFor="example" className="text-muted-foreground">Ví dụ minh họa <span className="text-xs font-normal">(Tùy chọn)</span></Label>
                 <Textarea
@@ -260,7 +239,6 @@ export default function WordNew() {
                 />
               </div>
 
-              {/* Danh mục & Mức độ khó */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="category" className="text-muted-foreground">Danh mục / Chủ đề <span className="text-xs font-normal">(Tùy chọn)</span></Label>
@@ -289,7 +267,6 @@ export default function WordNew() {
                 </div>
               </div>
 
-              {/* Thông báo lỗi trùng lặp từ */}
               {duplicate && (
                 <div className="p-3 bg-destructive/10 text-destructive rounded-lg flex items-start gap-2 text-sm">
                   <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -299,7 +276,6 @@ export default function WordNew() {
                 </div>
               )}
 
-              {/* Thông báo lỗi hệ thống chung khi submit */}
               {errors.submit && (
                 <div className="p-3 bg-destructive/10 text-destructive rounded-lg flex items-center gap-2 text-sm">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -307,7 +283,6 @@ export default function WordNew() {
                 </div>
               )}
 
-              {/* Thanh hành động bấm lưu */}
               <div className="flex justify-end gap-2 pt-2">
                 <Link href="/words">
                   <Button type="button" variant="ghost" disabled={isPending}>
@@ -327,3 +302,5 @@ export default function WordNew() {
     </Layout>
   );
 }
+
+  
