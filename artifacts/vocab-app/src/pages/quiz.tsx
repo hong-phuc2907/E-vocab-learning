@@ -470,8 +470,9 @@ export default function Quiz() {
         );
 
       const success =
-        missing.length === 0 &&
-        wrong.length === 0;
+  correct.length === correctWords.length &&
+  missing.length === 0 &&
+  wrong.length === 0;
 
       setFillResult({
         correct,
