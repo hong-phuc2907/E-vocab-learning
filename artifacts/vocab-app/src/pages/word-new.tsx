@@ -29,7 +29,6 @@ export default function WordNew() {
   const [, navigate] = useLocation();
 
   const [isPending, setIsPending] = useState(false);
-
   const [allWords, setAllWords] = useState<Word[]>([]);
   const [copyWordId, setCopyWordId] = useState("");
 
@@ -48,9 +47,30 @@ export default function WordNew() {
 
   useEffect(() => {
     if (!user) return;
-
     listWords(user.uid).then(setAllWords);
   }, [user]);
+
+  // Chống màn hình trắng khi Firebase đang xác thực tài khoản
+  if (user === undefined) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-sm text-muted-foreground animate-pulse">Đang xác thực tài khoản...</p>
+      </div>
+    );
+  }
+
+  // Chống lỗi ngầm khi chưa đăng nhập
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-3 p-4">
+        <AlertCircle className="w-8 h-8 text-destructive" />
+        <p className="text-sm font-medium text-destructive">Bạn cần đăng nhập để thêm từ vựng mới!</p>
+        <Link href="/login" className="text-sm text-primary underline">
+          Đi đến trang đăng nhập
+        </Link>
+      </div>
+    );
+  }
 
   const set = (key: keyof typeof form) => (value: string) => {
     setForm((f) => ({
@@ -85,12 +105,10 @@ export default function WordNew() {
 
     const newErrors: Record<string, string> = {};
 
-    // CHỈ BẮT BUỘC NHẬP TỪ TIẾNG ANH
     if (!form.term.trim()) {
       newErrors.term = "Vui lòng nhập từ tiếng Anh";
     }
 
-    // CHỈ BẮT BUỘC NHẬP NGHĨA
     if (!form.definition.trim()) {
       newErrors.definition = "Vui lòng nhập nghĩa của từ";
     }
@@ -106,7 +124,6 @@ export default function WordNew() {
       const input = {
         term: form.term.trim(),
         definition: form.definition.trim(),
-        // Nếu các ô dưới đây để trống, hệ thống sẽ tự động gửi undefined lên Firestore thay vì chuỗi rỗng
         partOfSpeech: form.partOfSpeech.trim() || undefined,
         example: form.example.trim() || undefined,
         pronunciation: form.pronunciation.trim() || undefined,
@@ -122,20 +139,20 @@ export default function WordNew() {
       }
 
       await createWord(user.uid, input);
-
       navigate("/words");
     } catch (error) {
       console.error("Lỗi khi thêm từ:", error);
-
       setErrors({
         submit: "Không thể thêm từ vựng. Vui lòng thử lại.",
       });
     } finally {
       setIsPending(false);
-    }  return (
+    }
+  };
+    return (
     <Layout>
       <div className="max-w-2xl mx-auto space-y-6 p-4">
-        {/* Nút quay lại */}
+        {/* Tiêu đề & Nút quay lại */}
         <div className="flex items-center justify-between">
           <Link href="/words" className="flex items-center text-sm text-muted-foreground hover:text-foreground gap-1">
             <ArrowLeft className="w-4 h-4" /> Quay lại danh sách
@@ -306,7 +323,4 @@ export default function WordNew() {
       </div>
     </Layout>
   );
-  }
-  
-  };
-  
+}
