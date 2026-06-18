@@ -85,12 +85,14 @@ export default function WordNew() {
 
     const newErrors: Record<string, string> = {};
 
+    // CHỈ BẮT BUỘC NHẬP TỪ TIẾNG ANH
     if (!form.term.trim()) {
-      newErrors.term = "Vui lòng nhập từ";
+      newErrors.term = "Vui lòng nhập từ tiếng Anh";
     }
 
+    // CHỈ BẮT BUỘC NHẬP NGHĨA
     if (!form.definition.trim()) {
-      newErrors.definition = "Vui lòng nhập nghĩa";
+      newErrors.definition = "Vui lòng nhập nghĩa của từ";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -104,10 +106,11 @@ export default function WordNew() {
       const input = {
         term: form.term.trim(),
         definition: form.definition.trim(),
-        partOfSpeech: form.partOfSpeech || undefined,
-        example: form.example || undefined,
-        pronunciation: form.pronunciation || undefined,
-        category: form.category || undefined,
+        // Nếu các ô dưới đây để trống, hệ thống sẽ tự động gửi undefined lên Firestore thay vì chuỗi rỗng
+        partOfSpeech: form.partOfSpeech.trim() || undefined,
+        example: form.example.trim() || undefined,
+        pronunciation: form.pronunciation.trim() || undefined,
+        category: form.category.trim() || undefined,
         difficulty: form.difficulty,
       };
 
@@ -129,9 +132,7 @@ export default function WordNew() {
       });
     } finally {
       setIsPending(false);
-    }
-  };
-    return (
+    }  return (
     <Layout>
       <div className="max-w-2xl mx-auto space-y-6 p-4">
         {/* Nút quay lại */}
@@ -180,9 +181,9 @@ export default function WordNew() {
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-4">
               
-              {/* Từ vựng */}
+              {/* Từ vựng - BẮT BUỘC */}
               <div className="space-y-1.5">
-                <Label htmlFor="term">Từ vựng <span className="text-destructive">*</span></Label>
+                <Label htmlFor="term">Từ vựng tiếng Anh <span className="text-destructive">*</span></Label>
                 <Input
                   id="term"
                   placeholder="Ví dụ: Ephemeral, Serendipity..."
@@ -193,10 +194,10 @@ export default function WordNew() {
                 {errors.term && <p className="text-xs text-destructive">{errors.term}</p>}
               </div>
 
-              {/* Phiên âm & Từ loại */}
+              {/* Phiên âm & Từ loại - KHÔNG BẮT BUỘC */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="pronunciation">Phiên âm</Label>
+                  <Label htmlFor="pronunciation" className="text-muted-foreground">Phiên âm <span className="text-xs font-normal">(Tùy chọn)</span></Label>
                   <Input
                     id="pronunciation"
                     placeholder="Ví dụ: /ɪˈfemərəl/"
@@ -205,22 +206,22 @@ export default function WordNew() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="partOfSpeech">Từ loại</Label>
+                  <Label htmlFor="partOfSpeech" className="text-muted-foreground">Từ loại <span className="text-xs font-normal">(Tùy chọn)</span></Label>
                   <Input
                     id="partOfSpeech"
-                    placeholder="Ví dụ: Noun, Verb, Adjective..."
+                    placeholder="Ví dụ: Noun, Verb, Adj..."
                     value={form.partOfSpeech}
                     onChange={(e) => set("partOfSpeech")(e.target.value)}
                   />
                 </div>
               </div>
 
-              {/* Định nghĩa / Nghĩa của từ */}
+              {/* Định nghĩa - BẮT BUỘC */}
               <div className="space-y-1.5">
                 <Label htmlFor="definition">Định nghĩa / Nghĩa của từ <span className="text-destructive">*</span></Label>
                 <Textarea
                   id="definition"
-                  placeholder="Nhập ý nghĩa chi tiết của từ..."
+                  placeholder="Nhập ý nghĩa tiếng Việt chi tiết của từ..."
                   value={form.definition}
                   onChange={(e) => set("definition")(e.target.value)}
                   className={errors.definition ? "border-destructive" : ""}
@@ -228,9 +229,9 @@ export default function WordNew() {
                 {errors.definition && <p className="text-xs text-destructive">{errors.definition}</p>}
               </div>
 
-              {/* Ví dụ minh họa */}
+              {/* Ví dụ minh họa - KHÔNG BẮT BUỘC */}
               <div className="space-y-1.5">
-                <Label htmlFor="example">Ví dụ minh họa</Label>
+                <Label htmlFor="example" className="text-muted-foreground">Ví dụ minh họa <span className="text-xs font-normal">(Tùy chọn)</span></Label>
                 <Textarea
                   id="example"
                   placeholder="Đặt câu ví dụ giúp bạn dễ nhớ từ này hơn..."
@@ -242,7 +243,7 @@ export default function WordNew() {
               {/* Danh mục & Mức độ khó */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="category">Danh mục (Chủ đề)</Label>
+                  <Label htmlFor="category" className="text-muted-foreground">Danh mục / Chủ đề <span className="text-xs font-normal">(Tùy chọn)</span></Label>
                   <Input
                     id="category"
                     placeholder="Ví dụ: Công nghệ, Đời sống..."
@@ -305,4 +306,7 @@ export default function WordNew() {
       </div>
     </Layout>
   );
-}
+  }
+  
+  };
+  
