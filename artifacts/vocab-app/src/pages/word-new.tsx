@@ -131,8 +131,7 @@ export default function WordNew() {
       setIsPending(false);
     }
   };
-
-  return (
+    return (
     <Layout>
       <div className="max-w-2xl mx-auto space-y-6 p-4">
         {/* Nút quay lại */}
@@ -297,5 +296,13 @@ export default function WordNew() {
                 <Button type="submit" disabled={isPending}>
                   <Plus className="w-4 h-4 mr-2" />
                   {isPending ? "Đang lưu..." : "Thêm từ vựng"}
-                </
-      
+                </Button>
+              </div>
+
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </Layout>
+  );
+}
