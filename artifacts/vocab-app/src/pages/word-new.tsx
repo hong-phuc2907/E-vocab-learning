@@ -297,22 +297,5 @@ export default function WordNew() {
                 <Button type="submit" disabled={isPending}>
                   <Plus className="w-4 h-4 mr-2" />
                   {isPending ? "Đang lưu..." : "Thêm từ vựng"}
-                </Button>
-              </div>
-
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    </Layout>
-  );
-}
-Circle className="w-4 h-4 flex-shrink-0" />
-                  <div>{errors.submit}</div>
-                </div>
-              )}
-
-              {/* Thanh hành động bấm lưu */}
-              <div className="flex justify-end gap-2 pt-2">
-                <Link href="/words">
-                  <Button type="button" variant="ghost
+                </
+      
