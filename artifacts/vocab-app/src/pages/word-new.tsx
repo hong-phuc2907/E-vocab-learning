@@ -86,7 +86,7 @@ export default function WordNew() {
 
     setForm((f) => ({
       ...f,
-      definition: source.definition,
+      definition: source.definition || "",
       example: source.example || "",
       pronunciation: source.pronunciation || "",
       partOfSpeech: source.partOfSpeech || "",
@@ -105,11 +105,11 @@ export default function WordNew() {
 
     const newErrors: Record<string, string> = {};
 
-    if (!form.term.trim()) {
+    if (!form.term || !form.term.trim()) {
       newErrors.term = "Vui lòng nhập từ tiếng Anh";
     }
 
-    if (!form.definition.trim()) {
+    if (!form.definition || !form.definition.trim()) {
       newErrors.definition = "Vui lòng nhập nghĩa của từ";
     }
 
@@ -121,27 +121,30 @@ export default function WordNew() {
     setIsPending(true);
 
     try {
-      const input = {
+      // Xử lý chuỗi an toàn: Nếu trống thì loại bỏ hoàn toàn thuộc tính để Firestore không báo lỗi loại dữ liệu
+      const input: any = {
         term: form.term.trim(),
         definition: form.definition.trim(),
-        partOfSpeech: form.partOfSpeech.trim() || undefined,
-        example: form.example.trim() || undefined,
-        pronunciation: form.pronunciation.trim() || undefined,
-        category: form.category.trim() || undefined,
         difficulty: form.difficulty,
       };
+
+      if (form.partOfSpeech && form.partOfSpeech.trim()) input.partOfSpeech = form.partOfSpeech.trim();
+      if (form.example && form.example.trim()) input.example = form.example.trim();
+      if (form.pronunciation && form.pronunciation.trim()) input.pronunciation = form.pronunciation.trim();
+      if (form.category && form.category.trim()) input.category = form.category.trim();
 
       const dup = await findDuplicate(user.uid, input);
 
       if (dup) {
         setDuplicate(dup);
+        setIsPending(false);
         return;
       }
 
       await createWord(user.uid, input);
       navigate("/words");
     } catch (error) {
-      console.error("Lỗi khi thêm từ:", error);
+      console.error("Lỗi chi tiết từ hệ thống:", error);
       setErrors({
         submit: "Không thể thêm từ vựng. Vui lòng thử lại.",
       });
