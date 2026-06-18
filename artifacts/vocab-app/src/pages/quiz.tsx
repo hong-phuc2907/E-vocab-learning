@@ -16,6 +16,7 @@ import {
   XCircle,
   RefreshCw,
   GraduationCap,
+  Clock,
 } from "lucide-react";
 
 import { Link } from "wouter";
@@ -41,16 +42,56 @@ type QuizMode =
   | "multi-select"
   | "mixed";
 
+type DateFilter =
+  | "all"
+  | "today"
+  | "yesterday"
+  | "3days"
+  | "7days";
+
 interface QuizQuestion {
   wordId: string;
+
   term: string;
-  definition: string;
+
+  correctDefinition: string;
 
   options: string[];
 
   type: QuizMode;
 
   correctWords: string[];
+}
+
+const GRADE_LABELS: Record<
+  string,
+  string
+> = {
+  Excellent: "Xuất sắc",
+  "Good work": "Tốt lắm",
+  "Keep practicing":
+    "Tiếp tục luyện tập",
+  "Needs work":
+    "Cần cải thiện",
+};
+
+function normalizeAnswer(
+  value: string
+) {
+  return value
+    .toLowerCase()
+    .trim();
+}
+
+function parseAnswers(
+  value: string
+) {
+  return value
+    .split(",")
+    .map((v) =>
+      normalizeAnswer(v)
+    )
+    .filter(Boolean);
 }
 
 export default function Quiz() {
@@ -65,121 +106,261 @@ export default function Quiz() {
   const [started, setStarted] =
     useState(false);
 
-  const [done, setDone] =
-    useState(false);
+  const [
+    currentIndex,
+    setCurrentIndex,
+  ] = useState(0);
 
-  const [currentIndex, setCurrentIndex] =
-    useState(0);
+  const [selected, setSelected] =
+    useState<string | null>(null);
 
   const [score, setScore] =
     useState(0);
 
+  const [done, setDone] =
+    useState(false);
+
   const [answers, setAnswers] =
     useState<boolean[]>([]);
-
-  const [selected, setSelected] =
-    useState<string | null>(null);
 
   const [isPending, setIsPending] =
     useState(false);
 
   const [quizMode, setQuizMode] =
-    useState<QuizMode>("multiple-choice");
+    useState<QuizMode>(
+      "multiple-choice"
+    );
 
-  const [questionCount, setQuestionCount] =
-    useState(10);
+  const [
+    questionCount,
+    setQuestionCount,
+  ] = useState(10);
+
+  const [dateFilter, setDateFilter] =
+    useState<DateFilter>("all");
 
   const [textAnswer, setTextAnswer] =
     useState("");
 
-  const [selectedWords, setSelectedWords] =
-    useState<string[]>([]);
+  const [
+    selectedWords,
+    setSelectedWords,
+  ] = useState<string[]>([]);
 
-  const [checked, setChecked] =
-    useState(false);
+  const [
+    fillResult,
+    setFillResult,
+  ] = useState<{
+    correct: string[];
+    wrong: string[];
+    missing: string[];
+  } | null>(null);
+
+  const [
+    multiChecked,
+    setMultiChecked,
+  ] = useState(false);
+
+  const [
+    elapsedSeconds,
+    setElapsedSeconds,
+  ] = useState(0);
 
   useEffect(() => {
     if (!user) return;
 
-    listWords(user.uid).then((words) => {
-      setAllWords(words);
-      setIsLoading(false);
-    });
+    listWords(user.uid).then(
+      (words) => {
+        setAllWords(words);
+        setIsLoading(false);
+      }
+    );
   }, [user]);
+
+  useEffect(() => {
+    if (!started || done) return;
+
+    const timer = setInterval(() => {
+      setElapsedSeconds(
+        (s) => s + 1
+      );
+    }, 1000);
+
+    return () =>
+      clearInterval(timer);
+  }, [started, done]);
+
+  const formatTime = (
+    sec: number
+  ) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+
+    return `${m
+      .toString()
+      .padStart(2, "0")}:${s
+      .toString()
+      .padStart(2, "0")}`;
+  };
+  const filteredWords = useMemo(() => {
+    if (dateFilter === "all") {
+      return allWords;
+    }
+
+    const now = new Date();
+
+    return allWords.filter((word) => {
+      if (!word.createdAt) {
+        return true;
+      }
+
+      const created = new Date(
+        word.createdAt
+      );
+
+      const diffDays = Math.floor(
+        (now.getTime() -
+          created.getTime()) /
+          (1000 * 60 * 60 * 24)
+      );
+
+      switch (dateFilter) {
+        case "today":
+          return diffDays === 0;
+
+        case "yesterday":
+          return diffDays === 1;
+
+        case "3days":
+          return diffDays <= 3;
+
+        case "7days":
+          return diffDays <= 7;
+
+        default:
+          return true;
+      }
+    });
+  }, [allWords, dateFilter]);
 
   const questions =
     useMemo<QuizQuestion[]>(() => {
       if (
         !started ||
-        allWords.length < 2
+        filteredWords.length < 4
       ) {
         return [];
       }
 
-      const pool = shuffle(allWords)
-        .slice(
-          0,
-          Math.min(
-            questionCount,
-            allWords.length
-          )
-        );
+      const uniqueWords = shuffle([
+        ...filteredWords,
+      ]).slice(
+        0,
+        Math.min(
+          questionCount,
+          filteredWords.length
+        )
+      );
 
-      return pool.map((word) => {
-        const synonyms =
-          word.synonyms ?? [];
+      return uniqueWords.map(
+        (word) => {
+          let type: QuizMode =
+            quizMode;
 
-        const correctWords = [
-          word.term,
-          ...synonyms,
-        ];
+          if (
+            quizMode === "mixed"
+          ) {
+            const modes: QuizMode[] =
+              [
+                "multiple-choice",
+                "fill-all",
+                "multi-select",
+              ];
 
-        let type: QuizMode =
-          quizMode;
+            type =
+              modes[
+                Math.floor(
+                  Math.random() *
+                    modes.length
+                )
+              ];
+          }
 
-        if (quizMode === "mixed") {
-          const modes: QuizMode[] = [
-            "multiple-choice",
-            "fill-all",
-            "multi-select",
+          const correctWords =
+            [
+              word.term,
+              ...(word.synonyms ??
+                []),
+            ];
+
+          const uniqueDefinitions =
+            [
+              ...new Set(
+                filteredWords
+                  .filter(
+                    (w) =>
+                      w.id !==
+                        word.id &&
+                      w.definition !==
+                        word.definition
+                  )
+                  .map(
+                    (w) =>
+                      w.definition
+                  )
+              ),
+            ];
+
+          const distractors =
+            shuffle(
+              uniqueDefinitions
+            ).slice(0, 3);
+
+          let options =
+            shuffle([
+              word.definition,
+              ...distractors,
+            ]);
+
+          options = [
+            ...new Set(options),
           ];
 
-          type =
-            modes[
-              Math.floor(
-                Math.random() *
-                  modes.length
+          while (
+            options.length < 4
+          ) {
+            const extra =
+              filteredWords[
+                Math.floor(
+                  Math.random() *
+                    filteredWords.length
+                )
+              ]?.definition;
+
+            if (
+              extra &&
+              !options.includes(
+                extra
               )
-            ];
+            ) {
+              options.push(extra);
+            }
+          }
+
+          return {
+            wordId: word.id,
+            term: word.term,
+            correctDefinition:
+              word.definition,
+            options:
+              shuffle(options),
+            type,
+            correctWords,
+          };
         }
-
-        const distractors = shuffle(
-          allWords
-            .filter(
-              (w) =>
-                w.id !== word.id
-            )
-            .map((w) => w.definition)
-        ).slice(0, 3);
-
-        return {
-          wordId: word.id,
-          term: word.term,
-          definition:
-            word.definition,
-
-          options: shuffle([
-            word.definition,
-            ...distractors,
-          ]),
-
-          correctWords,
-
-          type,
-        };
-      });
+      );
     }, [
-      allWords,
+      filteredWords,
       started,
       quizMode,
       questionCount,
@@ -194,21 +375,27 @@ export default function Quiz() {
           questions.length) *
         100
       : 0;
-  const handleMultipleChoice =
-    async (option: string) => {
+
+  const isCorrect =
+    selected ===
+    currentQ?.correctDefinition;
+
+  const handleSelect =
+    async (
+      option: string
+    ) => {
       if (
         selected !== null ||
         !user ||
         !currentQ
-      ) {
+      )
         return;
-      }
 
       setSelected(option);
 
       const correct =
         option ===
-        currentQ.definition;
+        currentQ.correctDefinition;
 
       if (correct) {
         setScore(
@@ -229,7 +416,9 @@ export default function Quiz() {
         correct
       );
 
-      if (currentIndex === 0) {
+      if (
+        currentIndex === 0
+      ) {
         updateStreak(
           user.uid
         );
@@ -238,34 +427,133 @@ export default function Quiz() {
       setIsPending(false);
     };
 
-  const handleFillAll =
+  const handleFillCheck =
+    async () => {
+      if (
+        !user ||
+        !currentQ
+      )
+        return;
+
+      const userAnswers =
+        parseAnswers(
+          textAnswer
+        );
+
+      const correctWords =
+        currentQ.correctWords.map(
+          normalizeAnswer
+        );
+
+      const correct =
+        userAnswers.filter(
+          (a) =>
+            correctWords.includes(
+              a
+            )
+        );
+
+      const wrong =
+        userAnswers.filter(
+          (a) =>
+            !correctWords.includes(
+              a
+            )
+        );
+
+      const missing =
+        correctWords.filter(
+          (a) =>
+            !userAnswers.includes(
+              a
+            )
+        );
+
+      const success =
+        missing.length === 0 &&
+        wrong.length === 0;
+
+      setFillResult({
+        correct,
+        wrong,
+        missing,
+      });
+
+      setSelected(
+        success
+          ? "correct"
+          : "wrong"
+      );
+
+      if (success) {
+        setScore(
+          (s) => s + 1
+        );
+      }
+      setAnswers((a) => [
+        ...a,
+        success,
+      ]);
+
+      await reviewWord(
+        user.uid,
+        currentQ.wordId,
+        success
+      );
+    };
+
+  const toggleMultiWord = (
+    word: string
+  ) => {
+    if (multiChecked)
+      return;
+
+    setSelectedWords(
+      (prev) => {
+        if (
+          prev.includes(word)
+        ) {
+          return prev.filter(
+            (w) => w !== word
+          );
+        }
+
+        return [
+          ...prev,
+          word,
+        ];
+      }
+    );
+  };
+
+  const handleMultiCheck =
     async () => {
       if (
         !currentQ ||
         !user
-      ) {
+      )
         return;
-      }
-
-      const userWords =
-        textAnswer
-          .toLowerCase()
-          .split(",")
-          .map((s) =>
-            s.trim()
-          )
-          .filter(Boolean);
 
       const correctWords =
         currentQ.correctWords.map(
-          (w) =>
-            w.toLowerCase()
+          normalizeAnswer
+        );
+
+      const selectedNormalized =
+        selectedWords.map(
+          normalizeAnswer
         );
 
       const allCorrect =
         correctWords.every(
           (w) =>
-            userWords.includes(
+            selectedNormalized.includes(
+              w
+            )
+        ) &&
+        selectedNormalized.every(
+          (w) =>
+            correctWords.includes(
               w
             )
         );
@@ -281,8 +569,8 @@ export default function Quiz() {
         allCorrect,
       ]);
 
-      setSelected(
-        "__answered__"
+      setMultiChecked(
+        true
       );
 
       await reviewWord(
@@ -292,65 +580,20 @@ export default function Quiz() {
       );
     };
 
-  const handleMultiSelect =
-    async () => {
+  const handleNext =
+    () => {
       if (
-        !currentQ ||
-        !user
+        currentIndex + 1 >=
+        questions.length
       ) {
+        setDone(true);
         return;
       }
 
-      const selectedLower =
-        selectedWords.map(
-          (w) =>
-            w.toLowerCase()
-        );
-
-      const correctLower =
-        currentQ.correctWords.map(
-          (w) =>
-            w.toLowerCase()
-        );
-
-      const correct =
-        correctLower.every(
-          (w) =>
-            selectedLower.includes(
-              w
-            )
-        ) &&
-        selectedLower.every(
-          (w) =>
-            correctLower.includes(
-              w
-            )
-        );
-
-      if (correct) {
-        setScore(
-          (s) => s + 1
-        );
-      }
-
-      setAnswers((a) => [
-        ...a,
-        correct,
-      ]);
-
-      setSelected(
-        "__answered__"
+      setCurrentIndex(
+        (i) => i + 1
       );
 
-      await reviewWord(
-        user.uid,
-        currentQ.wordId,
-        correct
-      );
-    };
-
-  const handleNext =
-    () => {
       setSelected(null);
 
       setTextAnswer("");
@@ -359,33 +602,28 @@ export default function Quiz() {
         []
       );
 
-      setChecked(false);
+      setFillResult(null);
 
-      if (
-        currentIndex + 1 >=
-        questions.length
-      ) {
-        setDone(true);
-      } else {
-        setCurrentIndex(
-          (i) => i + 1
-        );
-      }
+      setMultiChecked(
+        false
+      );
     };
 
   const handleRestart =
     () => {
       setStarted(false);
 
-      setDone(false);
+      setCurrentIndex(
+        0
+      );
 
-      setCurrentIndex(0);
+      setSelected(null);
 
       setScore(0);
 
-      setAnswers([]);
+      setDone(false);
 
-      setSelected(null);
+      setAnswers([]);
 
       setTextAnswer("");
 
@@ -393,15 +631,60 @@ export default function Quiz() {
         []
       );
 
-      setChecked(false);
+      setFillResult(null);
+
+      setMultiChecked(
+        false
+      );
+
+      setElapsedSeconds(
+        0
+      );
     };
+
+  const multiOptions =
+    useMemo(() => {
+      if (
+        !currentQ ||
+        currentQ.type !==
+          "multi-select"
+      ) {
+        return [];
+      }
+
+      const correct =
+        currentQ.correctWords;
+
+      const wrong =
+        shuffle(
+          filteredWords
+            .filter(
+              (w) =>
+                !correct.includes(
+                  w.term
+                )
+            )
+            .map(
+              (w) => w.term
+            )
+        ).slice(0, 7);
+
+      return shuffle([
+        ...correct,
+        ...wrong,
+      ]).slice(0, 10);
+    }, [
+      currentQ,
+      filteredWords,
+    ]);
 
   if (isLoading) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-64">
           <div className="animate-pulse text-muted-foreground">
-            Đang tải...
+            Đang chuẩn bị bài
+            kiểm tra...
           </div>
         </div>
       </Layout>
@@ -409,49 +692,42 @@ export default function Quiz() {
   }
 
   if (
-    allWords.length < 4
+    filteredWords.length <
+    4
   ) {
     return (
       <Layout>
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <GraduationCap className="w-16 h-16 mb-4" />
+        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+          <GraduationCap className="w-16 h-16 text-muted-foreground" />
 
           <h2 className="text-2xl font-bold">
-            Chưa đủ từ
+            Không đủ từ
           </h2>
 
-          <p>
-            Cần ít nhất
-            4 từ vựng
+          <p className="text-muted-foreground">
+            Hãy thêm ít nhất
+            4 từ phù hợp bộ
+            lọc đã chọn
           </p>
-
-          <Button
-            asChild
-            className="mt-4"
-          >
-            <Link href="/words/new">
-              Thêm từ
-            </Link>
-          </Button>
         </div>
       </Layout>
     );
-  }
-  if (!started) {
+  }if (!started) {
     return (
       <Layout>
         <div className="max-w-lg mx-auto flex flex-col items-center justify-center py-12 text-center space-y-6">
+
           <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
             <GraduationCap className="w-10 h-10 text-primary" />
           </div>
 
           <div>
-            <h1 className="text-3xl font-bold">
+            <h1 className="text-3xl font-serif font-bold">
               Bài kiểm tra từ vựng
             </h1>
 
             <p className="text-muted-foreground mt-2">
-              Chọn chế độ và số lượng câu hỏi
+              Kiểm tra từ vựng theo nhiều chế độ
             </p>
           </div>
 
@@ -475,7 +751,7 @@ export default function Quiz() {
               </option>
 
               <option value="multi-select">
-                Chọn tất cả từ đúng
+                Chọn tất cả đáp án đúng
               </option>
 
               <option value="mixed">
@@ -488,7 +764,9 @@ export default function Quiz() {
               value={questionCount}
               onChange={(e) =>
                 setQuestionCount(
-                  Number(e.target.value)
+                  Number(
+                    e.target.value
+                  )
                 )
               }
             >
@@ -513,6 +791,36 @@ export default function Quiz() {
               </option>
             </select>
 
+            <select
+              className="w-full border rounded-lg p-2"
+              value={dateFilter}
+              onChange={(e) =>
+                setDateFilter(
+                  e.target.value as DateFilter
+                )
+              }
+            >
+              <option value="all">
+                Tất cả từ
+              </option>
+
+              <option value="today">
+                Thêm hôm nay
+              </option>
+
+              <option value="yesterday">
+                Thêm hôm qua
+              </option>
+
+              <option value="3days">
+                Trong 3 ngày
+              </option>
+
+              <option value="7days">
+                Trong 7 ngày
+              </option>
+            </select>
+
           </div>
 
           <Button
@@ -522,7 +830,7 @@ export default function Quiz() {
               setStarted(true)
             }
           >
-            Bắt đầu
+            Bắt đầu kiểm tra
           </Button>
         </div>
       </Layout>
@@ -558,27 +866,35 @@ export default function Quiz() {
             {pct}%
           </div>
 
-          <div className="flex flex-wrap gap-2 justify-center">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Clock className="w-4 h-4" />
+            {formatTime(
+              elapsedSeconds
+            )}
+          </div>
+
+          <div className="flex gap-2 flex-wrap justify-center">
             {answers.map(
               (
                 correct,
-                index
+                i
               ) => (
                 <div
-                  key={index}
+                  key={i}
                   className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${
                     correct
                       ? "bg-green-100 text-green-700"
                       : "bg-red-100 text-red-700"
                   }`}
                 >
-                  {index + 1}
+                  {i + 1}
                 </div>
               )
             )}
           </div>
 
           <div className="flex gap-3">
+
             <Button
               variant="outline"
               onClick={
@@ -594,8 +910,8 @@ export default function Quiz() {
                 Tổng quan
               </Link>
             </Button>
-          </div>
 
+          </div>
         </div>
       </Layout>
     );
@@ -605,80 +921,84 @@ export default function Quiz() {
     <Layout>
       <div className="max-w-2xl mx-auto space-y-6">
 
-        <div className="flex justify-between">
+        <div className="flex items-center justify-between">
+
           <div>
             <h1 className="text-2xl font-bold">
               Kiểm tra
             </h1>
 
             <p className="text-sm text-muted-foreground">
-              Câu {currentIndex + 1} / {questions.length}
+              Câu {currentIndex + 1}
+              {" / "}
+              {questions.length}
             </p>
           </div>
 
-          <div>
-            <span className="text-green-600 font-bold">
+          <div className="text-right">
+
+            <div className="text-green-600 font-bold">
               {score}
-            </span>
-            <span>
-              {" "}
-              / {currentIndex}
-            </span>
+            </div>
+
+            <div className="text-sm text-muted-foreground flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              {formatTime(
+                elapsedSeconds
+              )}
+            </div>
+
           </div>
+
         </div>
 
         <Progress
           value={progress}
           className="h-2"
         />
-        <div className="bg-card border rounded-2xl p-8 text-center">
+        <div className="bg-card border rounded-2xl p-8">
 
-          {currentQ.type ===
+          {currentQ?.type ===
             "multiple-choice" && (
             <>
-              <p className="text-xs uppercase text-muted-foreground mb-3">
+              <p className="text-center text-sm text-muted-foreground mb-4">
                 Từ này có nghĩa là gì?
               </p>
 
-              <h2 className="text-4xl font-bold mb-6">
+              <h2 className="text-4xl font-bold text-center mb-6">
                 {currentQ.term}
               </h2>
 
               <div className="grid gap-3">
 
                 {currentQ.options.map(
-                  (
-                    option,
-                    i
-                  ) => {
+                  (option, i) => {
+                    const correct =
+                      option ===
+                      currentQ.correctDefinition;
+
                     const isSelected =
                       selected ===
                       option;
 
-                    const correct =
-                      option ===
-                      currentQ.definition;
-
                     let cls =
-                      "w-full text-left p-4 rounded-xl border-2 ";
+                      "w-full p-4 rounded-xl border-2 text-left ";
 
                     if (
                       selected !==
                       null
                     ) {
-                      if (
-                        correct
-                      ) {
+                      if (correct) {
                         cls +=
-                          "border-green-500 bg-green-100";
+                          "bg-green-50 border-green-500";
                       } else if (
                         isSelected
                       ) {
                         cls +=
-                          "border-red-500 bg-red-100";
+                          "bg-red-50 border-red-500";
                       } else {
                         cls +=
-                          "opacity-60";
+                          "opacity-50";
                       }
                     }
 
@@ -689,12 +1009,15 @@ export default function Quiz() {
                           cls
                         }
                         onClick={() =>
-                          handleMultipleChoice(
+                          handleSelect(
                             option
                           )
                         }
                       >
-                        {option}
+                        {String.fromCharCode(
+                          65 + i
+                        )}
+                        . {option}
                       </button>
                     );
                   }
@@ -704,164 +1027,155 @@ export default function Quiz() {
             </>
           )}
 
-          {currentQ.type ===
+          {currentQ?.type ===
             "fill-all" && (
             <>
-              <p className="text-sm text-muted-foreground mb-2">
-                Nghĩa
+              <p className="text-center text-sm text-muted-foreground mb-4">
+                Điền tất cả từ đúng
               </p>
 
-              <h2 className="text-3xl font-bold mb-4">
+              <h2 className="text-3xl font-bold text-center mb-6">
                 {
-                  currentQ.definition
+                  currentQ.correctDefinition
                 }
               </h2>
 
               <input
                 className="w-full border rounded-lg p-3"
-                placeholder="big, large"
-                value={
-                  textAnswer
-                }
-                onChange={(
-                  e
-                ) =>
+                placeholder="big, large..."
+                value={textAnswer}
+                onChange={(e) =>
                   setTextAnswer(
-                    e.target
-                      .value
+                    e.target.value
                   )
                 }
               />
 
-              {!selected && (
+              {!fillResult && (
                 <Button
-                  className="mt-4 w-full"
+                  className="w-full mt-4"
                   onClick={
-                    handleFillAll
+                    handleFillCheck
                   }
                 >
                   Kiểm tra
                 </Button>
               )}
 
-              {selected && (
-                <div className="mt-4 text-left">
+              {fillResult && (
+                <div className="mt-4 space-y-2 text-sm">
 
-                  <p className="font-semibold text-blue-700">
-                    Đáp án:
-                  </p>
+                  <div className="font-bold">
+                    Đúng:
+                    {" "}
+                    {
+                      fillResult.correct
+                        .length
+                    }
+                    /
+                    {
+                      currentQ
+                        .correctWords
+                        .length
+                    }
+                  </div>
 
-                  <ul className="mt-2">
-                    {currentQ.correctWords.map(
-                      (
-                        word
-                      ) => (
-                        <li
-                          key={
-                            word
-                          }
-                        >
-                          • {word}
-                        </li>
-                      )
+                  <div className="text-green-700">
+                    Đúng:
+                    {" "}
+                    {fillResult.correct.join(
+                      ", "
                     )}
-                  </ul>
+                  </div>
+
+                  <div className="text-red-700">
+                    Sai:
+                    {" "}
+                    {fillResult.wrong.join(
+                      ", "
+                    )}
+                  </div>
+
+                  <div className="text-blue-700">
+                    Thiếu:
+                    {" "}
+                    {fillResult.missing.join(
+                      ", "
+                    )}
+                  </div>
 
                 </div>
               )}
             </>
           )}
 
-          {currentQ.type ===
+          {currentQ?.type ===
             "multi-select" && (
             <>
-              <p className="text-sm text-muted-foreground mb-2">
-                Nghĩa
+              <p className="text-center text-sm text-muted-foreground mb-4">
+                Chọn tất cả từ đúng
               </p>
 
-              <h2 className="text-3xl font-bold mb-6">
+              <h2 className="text-3xl font-bold text-center mb-6">
                 {
-                  currentQ.definition
+                  currentQ.correctDefinition
                 }
               </h2>
 
               <div className="grid grid-cols-2 gap-3">
 
-                {currentQ.options.map(
-                  (
-                    option
-                  ) => {
-                    const correct =
-                      currentQ.correctWords.includes(
-                        option
-                      );
-
-                    const chosen =
+                {multiOptions.map(
+                  (word) => {
+                    const selectedNow =
                       selectedWords.includes(
-                        option
+                        word
                       );
 
-                    let color =
-                      "";
+                    const isCorrect =
+                      currentQ.correctWords.includes(
+                        word
+                      );
+
+                    let cls =
+                      "p-3 rounded-lg border ";
 
                     if (
-                      checked
+                      multiChecked
                     ) {
                       if (
-                        correct &&
-                        chosen
+                        isCorrect &&
+                        selectedNow
                       ) {
-                        color =
+                        cls +=
                           "bg-green-100 border-green-500";
                       } else if (
-                        correct &&
-                        !chosen
+                        isCorrect &&
+                        !selectedNow
                       ) {
-                        color =
+                        cls +=
                           "bg-blue-100 border-blue-500";
                       } else if (
-                        !correct &&
-                        chosen
+                        !isCorrect &&
+                        selectedNow
                       ) {
-                        color =
+                        cls +=
                           "bg-red-100 border-red-500";
                       }
                     }
 
                     return (
                       <button
-                        key={
-                          option
+                        key={word}
+                        className={
+                          cls
                         }
-                        className={`border rounded-lg p-3 ${color}`}
-                        onClick={() => {
-                          if (
-                            checked
+                        onClick={() =>
+                          toggleMultiWord(
+                            word
                           )
-                            return;
-
-                          setSelectedWords(
-                            (
-                              prev
-                            ) =>
-                              prev.includes(
-                                option
-                              )
-                                ? prev.filter(
-                                    (
-                                      w
-                                    ) =>
-                                      w !==
-                                      option
-                                  )
-                                : [
-                                    ...prev,
-                                    option,
-                                  ]
-                          );
-                        }}
+                        }
                       >
-                        {option}
+                        {word}
                       </button>
                     );
                   }
@@ -869,15 +1183,12 @@ export default function Quiz() {
 
               </div>
 
-              {!checked && (
+              {!multiChecked && (
                 <Button
-                  className="mt-4 w-full"
-                  onClick={() => {
-                    setChecked(
-                      true
-                    );
-                    handleMultiSelect();
-                  }}
+                  className="w-full mt-4"
+                  onClick={
+                    handleMultiCheck
+                  }
                 >
                   Kiểm tra
                 </Button>
@@ -887,11 +1198,21 @@ export default function Quiz() {
 
         </div>
 
-        {selected && (
+        {((currentQ?.type ===
+          "multiple-choice" &&
+          selected !== null) ||
+          (currentQ?.type ===
+            "fill-all" &&
+            fillResult) ||
+          (currentQ?.type ===
+            "multi-select" &&
+            multiChecked)) && (
           <Button
             size="lg"
             className="w-full"
-            onClick={handleNext}
+            onClick={
+              handleNext
+            }
           >
             {currentIndex +
               1 >=
