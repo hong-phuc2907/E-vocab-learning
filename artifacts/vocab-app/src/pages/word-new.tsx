@@ -38,14 +38,12 @@ export default function WordNew() {
 
   const [isPending, setIsPending] = useState(false);
   const [allWords, setAllWords] = useState<Word[]>([]);
-  
-  // State phục vụ tính năng tìm kiếm từ cũ để copy nghĩa
   const [searchQuery, setSearchQuery] = useState("");
 
   const [form, setForm] = useState({
     term: "",
     definition: "",
-    partOfSpeech: "",
+    partOfSpeech: "", 
     example: "",
     pronunciation: "",
     category: "",
@@ -84,32 +82,50 @@ export default function WordNew() {
     setForm((f) => ({ ...f, [key]: value }));
   };
 
-  const handleTogglePos = (posValue: string) => {
-    const currentArray = form.partOfSpeech ? form.partOfSpeech.split(", ") : [];
-    if (currentArray.includes(posValue)) {
-      const newArray = currentArray.filter(item => item !== posValue);
-      set("partOfSpeech")(newArray.join(", "));
-    } else {
-      set("partOfSpeech")([...currentArray, posValue].join(", "));
-    }
+  // HÀM CHỐNG CRASH: Chuyển đổi an toàn mọi kiểu dữ liệu của loại từ thành Mảng chuẩn
+  const parsePartsOfSpeech = (val: any): string[] => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val.map(v => String(v).trim());
+    if (typeof val === "string") return val.split(",").map(v => v.trim()).filter(Boolean);
+    return [];
   };
 
-  // Logic sao chép nghĩa từ một từ vựng được tìm thấy
+  // Hàm xử lý tick/bỏ tick bằng mảng sạch hoàn toàn
+  const handleTogglePos = (posValue: string) => {
+    const currentParts = parsePartsOfSpeech(form.partOfSpeech);
+    let newParts: string[];
+
+    if (currentParts.includes(posValue)) {
+      newParts = currentParts.filter(item => item !== posValue);
+    } else {
+      newParts = [...currentParts, posValue];
+    }
+
+    setForm(f => ({
+      ...f,
+      partOfSpeech: newParts.join(", ")
+    }));
+  };
+
   const handleCopyWord = (wordId: string) => {
     const source = allWords.find((w) => w.id === wordId);
     if (!source) return;
+
+    // Ép kiểu an toàn khi lấy loại từ từ cơ sở dữ liệu cũ về form
+    const rawPos = source.partOfSpeech;
+    const cleanPos = Array.isArray(rawPos) ? rawPos.join(", ") : String(rawPos || "");
+
     setForm((f) => ({
       ...f,
       definition: source.definition || "",
       example: source.example || "",
       pronunciation: source.pronunciation || "",
-      partOfSpeech: source.partOfSpeech || "",
+      partOfSpeech: cleanPos,
       category: source.category || "",
       difficulty: source.difficulty || "medium",
     }));
   };
 
-  // Lọc danh sách từ vựng theo nội dung người dùng nhập vào ô tìm kiếm
   const filteredWords = allWords.filter((w) => {
     const query = searchQuery.toLowerCase().trim();
     return (
@@ -163,8 +179,7 @@ export default function WordNew() {
         submit: "Hệ thống gặp sự cố khi lưu dữ liệu. Vui lòng thử lại.",
       });
       setIsPending(false);
-    }
-  };  return (
+        return (
     <Layout>
       <div className="max-w-2xl mx-auto space-y-6 p-4">
         <div className="flex items-center justify-between">
@@ -191,7 +206,6 @@ export default function WordNew() {
                 />
               </div>
 
-              {/* Hộp danh sách kết quả tìm kiếm */}
               {searchQuery.trim() !== "" && (
                 <div className="border rounded-md max-h-44 overflow-y-auto divide-y bg-background shadow-inner">
                   {filteredWords.length === 0 ? (
@@ -206,7 +220,9 @@ export default function WordNew() {
                       >
                         <div className="truncate pr-3">
                           <span className="font-semibold text-foreground">{word.term}</span>{" "}
-                          <span className="text-xs text-muted-foreground italic">({word.partOfSpeech || "chưa rõ loại"})</span>
+                          <span className="text-xs text-muted-foreground italic">
+                            ({Array.isArray(word.partOfSpeech) ? word.partOfSpeech.join(", ") : (word.partOfSpeech || "chưa rõ loại")})
+                          </span>
                           <p className="text-xs text-muted-foreground truncate mt-0.5">{word.definition}</p>
                         </div>
                         <Button
@@ -216,7 +232,7 @@ export default function WordNew() {
                           className="h-8 flex-shrink-0 font-medium text-xs gap-1"
                           onClick={() => {
                             handleCopyWord(word.id || "");
-                            setSearchQuery(""); // Copy xong tự động xóa trống ô tìm kiếm cho gọn
+                            setSearchQuery("");
                           }}
                         >
                           <Copy className="w-3 h-3" /> Sao chép
@@ -264,7 +280,8 @@ export default function WordNew() {
                   </Label>
                   <div className="flex flex-wrap gap-2">
                     {POS_OPTIONS.map((pos) => {
-                      const isSelected = form.partOfSpeech.split(", ").includes(pos.value);
+                      // Gọi hàm an toàn để kiểm tra trạng thái sáng/tối của nút bấm
+                      const isSelected = parsePartsOfSpeech(form.partOfSpeech).includes(pos.value);
                       return (
                         <button
                           key={pos.value}
@@ -369,6 +386,8 @@ export default function WordNew() {
       </div>
     </Layout>
   );
-}
-
+    }
+    
+    }
+  };
   
