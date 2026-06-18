@@ -43,13 +43,6 @@ interface QuizQuestion {
   correctWords: string[];
 }
 
-const GRADE_LABELS: Record<string, string> = {
-  Excellent: "Xuất sắc",
-  "Good work": "Tốt lắm",
-  "Keep practicing": "Tiếp tục luyện tập",
-  "Needs work": "Cần cải thiện",
-};
-
 function normalizeAnswer(value: string) {
   return value.toLowerCase().trim();
 }
@@ -103,8 +96,7 @@ export default function Quiz() {
     const s = sec % 60;
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
-
-  const filteredWords = useMemo(() => {
+    const filteredWords = useMemo(() => {
     if (dateFilter === "all") return allWords;
     const now = new Date();
     return allWords.filter((word) => {
@@ -120,7 +112,8 @@ export default function Quiz() {
       }
     });
   }, [allWords, dateFilter]);
-    const questions = useMemo<QuizQuestion[]>(() => {
+
+  const questions = useMemo<QuizQuestion[]>(() => {
     if (!started || filteredWords.length < 4) return [];
     const uniqueWords = shuffle([...filteredWords]).slice(0, Math.min(questionCount, filteredWords.length));
 
@@ -131,7 +124,17 @@ export default function Quiz() {
         type = modes[Math.floor(Math.random() * modes.length)];
       }
 
-      const correctWords = [word.term, ...(word.synonyms ?? [])];
+      const sameMeaningWords = allWords
+        .filter((w) => w.definition.toLowerCase().trim() === word.definition.toLowerCase().trim())
+        .map((w) => w.term.toLowerCase().trim());
+
+      const correctWords = [
+        ...new Set([
+          ...sameMeaningWords,
+          ...(word.synonyms ?? []).map((s) => s.toLowerCase().trim()),
+        ]),
+      ];
+
       const uniqueDefinitions = [...new Set(filteredWords.filter((w) => w.id !== word.id && w.definition !== word.definition).map((w) => w.definition))];
       const distractors = shuffle(uniqueDefinitions).slice(0, 3);
       let options = shuffle([word.definition, ...distractors]);
@@ -151,11 +154,10 @@ export default function Quiz() {
         correctWords,
       };
     });
-  }, [filteredWords, started, quizMode, questionCount]);
+  }, [filteredWords, started, quizMode, questionCount, allWords]);
 
   const currentQ = questions[currentIndex];
   const progress = questions.length > 0 ? (currentIndex / questions.length) * 100 : 0;
-  const isCorrect = selected === currentQ?.correctDefinition;
 
   const handleSelect = async (option: string) => {
     if (selected !== null || !user || !currentQ) return;
@@ -167,6 +169,24 @@ export default function Quiz() {
     await reviewWord(user.uid, currentQ.wordId, correct);
     if (currentIndex === 0) updateStreak(user.uid);
     setIsPending(false);
+  };
+
+  const handleFillAllCheck = async () => {
+    if (!user || !currentQ) return;
+    const entered = textAnswer.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean);
+    const correct = currentQ.correctWords.map((x) => x.toLowerCase());
+
+    const correctEntered = entered.filter((x) => correct.includes(x));
+    const missing = correct.filter((x) => !entered.includes(x));
+    const wrong = entered.filter((x) => !correct.includes(x));
+    const isAllCorrect = missing.length === 0 && wrong.length === 0;
+
+    setSelected(isAllCorrect ? "__correct__" : "__wrong__");
+    if (isAllCorrect) setScore((s) => s + 1);
+    setAnswers((a) => [...a, isAllCorrect]);
+
+    (window as any).fillAllResult = { correctEntered, missing, wrong, total: correct.length };
+    await reviewWord(user.uid, currentQ.wordId, isAllCorrect);
   };
 
   const toggleMultiWord = (word: string) => {
@@ -347,33 +367,21 @@ export default function Quiz() {
 
           {currentQ?.type === "fill-all" && (
             <div className="space-y-4">
+              <div className="bg-blue-50 border rounded-xl p-4">
+                <p className="text-sm text-muted-foreground">Nghĩa</p>
+                <p className="text-xl font-bold">{currentQ.correctDefinition}</p>
+              </div>
+
               <textarea
-                className="w-full border rounded-lg p-3"
-                rows={4}
-                placeholder="Nhập các từ cách nhau bằng dấu phẩy"
                 value={textAnswer}
                 onChange={(e) => setTextAnswer(e.target.value)}
+                placeholder="Nhập các từ cách nhau bằng dấu phẩy"
+                className="w-full border rounded-xl p-4 min-h-[120px]"
                 disabled={selected !== null}
               />
 
               {selected === null && (
-                <Button
-                  className="w-full"
-                  onClick={() => {
-                    const entered = textAnswer.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean);
-                    const correct = (currentQ.correctWords ?? [currentQ.term]).map((x) => x.toLowerCase());
-                    const correctEntered = entered.filter((x) => correct.includes(x));
-                    const missing = correct.filter((x) => !entered.includes(x));
-                    const wrong = entered.filter((x) => !correct.includes(x));
-                    const isAllCorrect = missing.length === 0 && wrong.length === 0;
-
-                    setSelected(isAllCorrect ? "__correct__" : "__wrong__");
-                    if (isAllCorrect) setScore((s) => s + 1);
-                    setAnswers((a) => [...a, isAllCorrect]);
-
-                    (window as any).fillAllResult = { correctEntered, missing, wrong, total: correct.length };
-                  }}
-                >
+                <Button className="w-full" onClick={handleFillAllCheck}>
                   Kiểm tra
                 </Button>
               )}
@@ -382,11 +390,11 @@ export default function Quiz() {
                 const result = (window as any).fillAllResult;
                 return (
                   <div className="rounded-xl border p-4 space-y-2">
-                    <p className="font-medium">Đúng: {result.correctEntered.length ? result.correctEntered.join(", ") : "Không có"}</p>
-                    <p className="text-blue-600">Thiếu: {result.missing.length ? result.missing.join(", ") : "Không có"}</p>
-                    <p className="text-red-600">Sai: {result.wrong.length ? result.wrong.join(", ") : "Không có"}</p>
-                    <p>{result.correctEntered.length}/{result.total} đáp án đúng</p>
-                    {result.missing.length === 0 && result.wrong.length === 0 && (
+                    <p className="font-medium">Đúng: {result?.correctEntered?.length ? result.correctEntered.join(", ") : "Không có"}</p>
+                    <p className="text-blue-600">Thiếu: {result?.missing?.length ? result.missing.join(", ") : "Không có"}</p>
+                    <p className="text-red-600">Sai: {result?.wrong?.length ? result.wrong.join(", ") : "Không có"}</p>
+                    <p>{result?.correctEntered?.length || 0}/{result?.total || 0} đáp án đúng</p>
+                    {result?.missing?.length === 0 && result?.wrong?.length === 0 && (
                       <p className="text-green-600 font-semibold">✅ Chính xác</p>
                     )}
                   </div>
