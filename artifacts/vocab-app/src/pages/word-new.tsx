@@ -121,13 +121,15 @@ if (dup) {
   return;
 }
 
-await createWord(user.uid, input);
+setLoading(true);
 
-setIsPending(false);
-
-navigate("/words");
-
-};
+try {
+  await createWord(user.uid, data);
+} catch (err) {
+  console.error(err);
+} finally {
+  setLoading(false);
+}
 
 return (
 <Layout>
