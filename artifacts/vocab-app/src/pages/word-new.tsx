@@ -143,7 +143,7 @@ export default function WordNew() {
           <h1 className="text-xl font-bold tracking-tight">Thêm từ vựng mới</h1>
         </div>
 
-        {/* Tính năng Sao chép nhanh từ đã có (nếu cần) */}
+        {/* Tính năng Sao chép nhanh từ đã có */}
         {allWords.length > 0 && (
           <Card>
             <CardContent className="pt-6 space-y-4">
@@ -283,6 +283,31 @@ export default function WordNew() {
               {errors.submit && (
                 <div className="p-3 bg-destructive/10 text-destructive rounded-lg flex items-center gap-2 text-sm">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <div>{errors.submit}</div>
+                </div>
+              )}
+
+              {/* Thanh hành động bấm lưu */}
+              <div className="flex justify-end gap-2 pt-2">
+                <Link href="/words">
+                  <Button type="button" variant="ghost" disabled={isPending}>
+                    Hủy bỏ
+                  </Button>
+                </Link>
+                <Button type="submit" disabled={isPending}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  {isPending ? "Đang lưu..." : "Thêm từ vựng"}
+                </Button>
+              </div>
+
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </Layout>
+  );
+}
+Circle className="w-4 h-4 flex-shrink-0" />
                   <div>{errors.submit}</div>
                 </div>
               )}
