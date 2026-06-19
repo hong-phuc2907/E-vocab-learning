@@ -107,3 +107,149 @@ export async function getGroupTree(uid: string): Promise<GroupNode[]> {
   groups.forEach((g) => { const node = nodeMap[g.id]; if (g.parentId && nodeMap[g.parentId]) nodeMap[g.parentId].subGroups.push(node); else rootNodes.push(node); });
   return rootNodes;
 }
+/* ========= ADVANCED GROUPS ========= */
+
+export async function createGroupAdvanced(
+uid: string,
+name: string,
+parentId: string | null = null
+) {
+const ref = doc(groupsCol(uid));
+
+let path: string[] = [];
+
+if (parentId) {
+const parentSnap = await getDoc(
+doc(
+db,
+"users",
+uid,
+"groups",
+parentId
+)
+);
+
+if (parentSnap.exists()) {
+  const parent =
+    parentSnap.data();
+
+  path = [
+    ...(parent.path ?? []),
+    parentId,
+  ];
+}
+
+}
+
+await setDoc(ref, {
+name,
+parentId,
+path,
+
+wordCount: 0,
+childrenCount: 0,
+
+createdAt:
+  new Date().toISOString(),
+
+updatedAt:
+  new Date().toISOString(),
+
+});
+
+return ref.id;
+}
+
+export async function addWordToGroup(
+uid: string,
+wordId: string,
+groupId: string
+) {
+const ref = doc(
+db,
+"users",
+uid,
+"words",
+wordId
+);
+
+const snap =
+await getDoc(ref);
+
+if (!snap.exists()) return;
+
+const data =
+snap.data();
+
+const groupIds = [
+...(data.groupIds ?? []),
+];
+
+if (
+!groupIds.includes(
+groupId
+)
+) {
+groupIds.push(groupId);
+}
+
+await updateDoc(ref, {
+groupIds,
+});
+}
+
+export async function removeWordFromGroup(
+uid: string,
+wordId: string,
+groupId: string
+) {
+const ref = doc(
+db,
+"users",
+uid,
+"words",
+wordId
+);
+
+const snap =
+await getDoc(ref);
+
+if (!snap.exists()) return;
+
+const data =
+snap.data();
+
+await updateDoc(ref, {
+groupIds: (
+data.groupIds ?? []
+).filter(
+(id: string) =>
+id !== groupId
+),
+});
+}
+
+export async function searchWords(
+uid: string,
+keyword: string
+) {
+const words =
+await listWords(uid);
+
+const s =
+keyword.toLowerCase();
+
+return words.filter(
+(w) =>
+w.term
+.toLowerCase()
+.includes(s) ||
+w.definition
+.toLowerCase()
+.includes(s) ||
+(w.synonyms ?? [])
+.join(" ")
+.toLowerCase()
+.includes(s)
+);
+}
