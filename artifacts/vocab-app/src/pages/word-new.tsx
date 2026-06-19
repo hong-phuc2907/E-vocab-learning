@@ -5,7 +5,9 @@ import {
   createWord,
   findDuplicate,
   listWords,
+  listGroups,
   type Word,
+  type Group,
 } from "@/lib/firestore";
 
 import { Button } from "@/components/ui/button";
@@ -40,6 +42,10 @@ export default function WordNew() {
   const [allWords, setAllWords] = useState<Word[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [groupSearch, setGroupSearch] = useState("");
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+
   const [form, setForm] = useState({
     term: "",
     definition: "",
@@ -55,7 +61,16 @@ export default function WordNew() {
 
   useEffect(() => {
     if (!user) return;
-    listWords(user.uid).then(setAllWords).catch(console.error);
+
+    Promise.all([
+      listWords(user.uid),
+      listGroups(user.uid),
+    ])
+      .then(([words, groups]) => {
+        setAllWords(words);
+        setGroups(groups);
+      })
+      .catch(console.error);
   }, [user]);
 
   if (user === undefined) {
@@ -78,7 +93,6 @@ export default function WordNew() {
     );
   }
 
-  // ĐÃ SỬA: Thay đổi value sang kiểu any để tương thích với trường độ khó (difficulty), không lo bị lỗi crash compile
   const set = (key: keyof typeof form) => (value: any) => {
     setForm((f) => ({ ...f, [key]: value }));
   };
@@ -159,6 +173,7 @@ export default function WordNew() {
         term: form.term.trim(),
         definition: form.definition.trim(),
         difficulty: form.difficulty,
+        groupIds: selectedGroups,
       };
 
       if (form.partOfSpeech && form.partOfSpeech.trim()) input.partOfSpeech = form.partOfSpeech.trim();
@@ -182,7 +197,9 @@ export default function WordNew() {
       });
       setIsPending(false);
     }
-  };  return (
+  };
+
+  return (
     <Layout>
       <div className="max-w-2xl mx-auto space-y-6 p-4">
         <div className="flex items-center justify-between">
@@ -192,7 +209,6 @@ export default function WordNew() {
           <h1 className="text-xl font-bold tracking-tight">Thêm từ vựng mới</h1>
         </div>
 
-        {/* Ô TRA CỨU ĐỂ SAO CHÉP NGHĨA */}
         {allWords.length > 0 && (
           <Card className="border-dashed border-primary/40 bg-primary/5">
             <CardContent className="pt-6 space-y-3">
@@ -249,7 +265,6 @@ export default function WordNew() {
           </Card>
         )}
 
-        {/* FORM CHÍNH NHẬP LIỆU */}
         <Card>
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -302,6 +317,43 @@ export default function WordNew() {
                     })}
                   </div>
                 </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label>Nhóm từ vựng</Label>
+                <Input
+                  placeholder="Tìm nhóm..."
+                  value={groupSearch}
+                  onChange={(e) => setGroupSearch(e.target.value)}
+                />
+                <div className="border rounded-lg p-2 max-h-40 overflow-auto">
+                  {groups
+                    .filter((g) => g.name.toLowerCase().includes(groupSearch.toLowerCase()))
+                    .map((group) => (
+                      <label
+                        key={group.id}
+                        className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedGroups.includes(group.id)}
+                          onChange={() => {
+                            if (selectedGroups.includes(group.id)) {
+                              setSelectedGroups(selectedGroups.filter((id) => id !== group.id));
+                            } else {
+                              setSelectedGroups([...selectedGroups, group.id]);
+                            }
+                          }}
+                        />
+                        <span>{group.name}</span>
+                      </label>
+                    ))}
+                </div>
+                {selectedGroups.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Đã chọn {selectedGroups.length} nhóm
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -388,6 +440,5 @@ export default function WordNew() {
       </div>
     </Layout>
   );
-}
-
-  
+                          }
+                
