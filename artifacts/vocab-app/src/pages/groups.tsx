@@ -1,144 +1,219 @@
-import { useEffect, useState } from "react";
-import { Link } from "wouter";
-import { Layout } from "@/components/layout";
+import React, { useState } from "react";
+import { Link, useLocation } from "wouter";
+
+import {
+BookOpen,
+LayoutDashboard,
+BrainCircuit,
+GraduationCap,
+PlusCircle,
+LogOut,
+ListOrdered,
+FolderTree,
+Menu,
+X,
+} from "lucide-react";
+
 import { useAuth } from "@/lib/auth-context";
-
-import {
-  createGroup,
-  listGroups,
-  type Group,
-} from "@/lib/firestore";
-
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
-export default function GroupsPage() {
-  const { user } = useAuth();
+export function Layout({
+children,
+}: {
+children: React.ReactNode;
+}) {
+const [location] =
+useLocation();
 
-  const [groups, setGroups] =
-    useState<Group[]>([]);
+const {
+user,
+logout,
+} = useAuth();
 
-  const [groupName, setGroupName] =
-    useState("");
+const [open, setOpen] =
+useState(false);
 
-  async function loadGroups() {
-    if (!user) return;
+const navItems = [
+{
+href: "/",
+label: "Trang chủ",
+icon: LayoutDashboard,
+},
 
-    const data =
-      await listGroups(user.uid);
+{
+  href: "/study",
+  label: "Học bài",
+  icon: BrainCircuit,
+},
 
-    setGroups(data);
-  }
+{
+  href: "/quiz",
+  label: "Kiểm tra",
+  icon: GraduationCap,
+},
 
-  useEffect(() => {
-    loadGroups();
-  }, [user]);
+{
+  href: "/groups",
+  label: "Nhóm từ vựng",
+  icon: FolderTree,
+},
 
-  async function handleCreate() {
-    if (
-      !user ||
-      !groupName.trim()
-    )
-      return;
+{
+  href: "/words",
+  label: "Quản lý từ vựng",
+  icon: ListOrdered,
+},
 
-    await createGroup(
-      user.uid,
-      groupName,
-      null
-    );
+{
+  href: "/words/new",
+  label: "Thêm từ mới",
+  icon: PlusCircle,
+},
 
-    setGroupName("");
+];
 
-    loadGroups();
-  }
+return (
+<div className="min-h-screen bg-background flex">
 
-  const rootGroups =
-    groups.filter(
-      (g) => !g.parentId
-    );
+  <button
+    className="fixed top-4 left-4 z-50 md:hidden bg-primary text-white p-2 rounded-lg"
+    onClick={() =>
+      setOpen(!open)
+    }
+  >
+    {open ? (
+      <X size={20} />
+    ) : (
+      <Menu size={20} />
+    )}
+  </button>
 
-  return (
-    <Layout>
-      <div className="space-y-6">
+  <aside
+    className={`
+    fixed inset-y-0 left-0 z-40
+    w-64 bg-sidebar
+    border-r border-sidebar-border
+    flex flex-col
+    transform transition-transform
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Tạo thư mục mới
-            </CardTitle>
-          </CardHeader>
+    ${open
+      ? "translate-x-0"
+      : "-translate-x-full"}
 
-          <CardContent className="flex gap-2">
-            <Input
-              placeholder="Tên nhóm"
-              value={groupName}
-              onChange={(e) =>
-                setGroupName(
-                  e.target.value
+    md:translate-x-0
+    `}
+  >
+    <div className="px-5 py-5 border-b border-sidebar-border">
+      <Link
+        href="/"
+        className="flex items-center gap-3"
+      >
+        <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center">
+          <BookOpen className="w-5 h-5 text-white" />
+        </div>
+
+        <span className="font-bold text-xl">
+          Lexify
+        </span>
+      </Link>
+    </div>
+
+    <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      {navItems.map(
+        (item) => {
+          const isActive =
+            location ===
+              item.href ||
+            (item.href !==
+              "/" &&
+              location.startsWith(
+                item.href
+              ));
+
+          return (
+            <Link
+              key={
+                item.href
+              }
+              href={
+                item.href
+              }
+              onClick={() =>
+                setOpen(
+                  false
                 )
               }
-            />
-
-            <Button
-              onClick={handleCreate}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                isActive
+                  ? "bg-primary text-white"
+                  : "hover:bg-muted"
+              }`}
             >
-              Tạo
-            </Button>
-          </CardContent>
-        </Card>
+              <item.icon className="w-4 h-4" />
+              {item.label}
+            </Link>
+          );
+        }
+      )}
+    </nav>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Kho nhóm từ vựng
-            </CardTitle>
-          </CardHeader>
+    <div className="px-3 py-4 border-t">
+      <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-muted mb-2">
 
-          <CardContent>
+        {user?.photoURL ? (
+          <img
+            src={
+              user.photoURL
+            }
+            alt=""
+            className="w-9 h-9 rounded-full"
+          />
+        ) : (
+          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold">
+            {user?.displayName?.[0]?.toUpperCase() ??
+              "?"}
+          </div>
+        )}
 
-            {rootGroups.length ===
-              0 && (
-              <p className="text-muted-foreground">
-                Chưa có nhóm nào
-              </p>
-            )}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold truncate">
+            {user?.displayName ??
+              "Người dùng"}
+          </p>
 
-            <div className="grid md:grid-cols-2 gap-3">
-
-              {rootGroups.map(
-                (group) => (
-                  <Link
-                    key={group.id}
-                    href={`/groups/${group.id}`}
-                  >
-                    <div className="border rounded-xl p-4 cursor-pointer hover:bg-muted transition">
-
-                      <div className="text-3xl mb-2">
-                        📁
-                      </div>
-
-                      <p className="font-semibold">
-                        {group.name}
-                      </p>
-
-                    </div>
-                  </Link>
-                )
-              )}
-
-            </div>
-
-          </CardContent>
-        </Card>
-
+          <p className="text-xs text-muted-foreground truncate">
+            {user?.email}
+          </p>
+        </div>
       </div>
-    </Layout>
-  );
+
+      <Button
+        variant="ghost"
+        size="sm"
+        className="w-full justify-start gap-2"
+        onClick={logout}
+      >
+        <LogOut className="w-4 h-4" />
+        Đăng xuất
+      </Button>
+    </div>
+  </aside>
+
+  {open && (
+    <div
+      className="fixed inset-0 bg-black/40 z-30 md:hidden"
+      onClick={() =>
+        setOpen(false)
+      }
+    />
+  )}
+
+  <main className="flex-1 md:ml-64 min-h-screen overflow-auto">
+    <div className="p-4 md:p-8 max-w-6xl mx-auto">
+      {children}
+    </div>
+  </main>
+</div>
+
+);
 }
