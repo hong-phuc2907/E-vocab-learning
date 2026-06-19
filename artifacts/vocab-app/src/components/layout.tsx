@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
+
 import {
 BookOpen,
 LayoutDashboard,
@@ -9,6 +10,8 @@ PlusCircle,
 LogOut,
 ListOrdered,
 FolderTree,
+Menu,
+X,
 } from "lucide-react";
 
 import { useAuth } from "@/lib/auth-context";
@@ -26,6 +29,9 @@ const {
 user,
 logout,
 } = useAuth();
+
+const [open, setOpen] =
+useState(false);
 
 const navItems = [
 {
@@ -68,18 +74,45 @@ icon: LayoutDashboard,
 
 return (
 <div className="min-h-screen bg-background flex">
-<aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 fixed inset-y-0 left-0 z-20">
 
+  <button
+    className="fixed top-4 left-4 z-50 md:hidden bg-primary text-white p-2 rounded-lg"
+    onClick={() =>
+      setOpen(!open)
+    }
+  >
+    {open ? (
+      <X size={20} />
+    ) : (
+      <Menu size={20} />
+    )}
+  </button>
+
+  <aside
+    className={`
+    fixed inset-y-0 left-0 z-40
+    w-64 bg-sidebar
+    border-r border-sidebar-border
+    flex flex-col
+    transform transition-transform
+
+    ${open
+      ? "translate-x-0"
+      : "-translate-x-full"}
+
+    md:translate-x-0
+    `}
+  >
     <div className="px-5 py-5 border-b border-sidebar-border">
       <Link
         href="/"
         className="flex items-center gap-3"
       >
-        <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+        <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center">
           <BookOpen className="w-5 h-5 text-white" />
         </div>
 
-        <span className="font-bold text-xl text-foreground tracking-tight">
+        <span className="font-bold text-xl">
           Lexify
         </span>
       </Link>
@@ -105,14 +138,18 @@ return (
               href={
                 item.href
               }
+              onClick={() =>
+                setOpen(
+                  false
+                )
+              }
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 isActive
-                  ? "bg-primary text-white shadow-sm"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent"
+                  ? "bg-primary text-white"
+                  : "hover:bg-muted"
               }`}
             >
-              <item.icon className="w-[18px] h-[18px] shrink-0" />
-
+              <item.icon className="w-4 h-4" />
               {item.label}
             </Link>
           );
@@ -120,8 +157,8 @@ return (
       )}
     </nav>
 
-    <div className="px-3 py-4 border-t border-sidebar-border">
-      <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-sidebar-accent mb-2">
+    <div className="px-3 py-4 border-t">
+      <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-muted mb-2">
 
         {user?.photoURL ? (
           <img
@@ -129,17 +166,17 @@ return (
               user.photoURL
             }
             alt=""
-            className="w-9 h-9 rounded-full ring-2 ring-primary/20"
+            className="w-9 h-9 rounded-full"
           />
         ) : (
-          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
+          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold">
             {user?.displayName?.[0]?.toUpperCase() ??
               "?"}
           </div>
         )}
 
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground truncate">
+          <p className="text-sm font-semibold truncate">
             {user?.displayName ??
               "Người dùng"}
           </p>
@@ -153,10 +190,8 @@ return (
       <Button
         variant="ghost"
         size="sm"
-        className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-red-50 text-sm"
-        onClick={
-          logout
-        }
+        className="w-full justify-start gap-2"
+        onClick={logout}
       >
         <LogOut className="w-4 h-4" />
         Đăng xuất
@@ -164,8 +199,17 @@ return (
     </div>
   </aside>
 
-  <main className="flex-1 ml-64 min-h-screen overflow-auto">
-    <div className="p-8 max-w-6xl mx-auto">
+  {open && (
+    <div
+      className="fixed inset-0 bg-black/40 z-30 md:hidden"
+      onClick={() =>
+        setOpen(false)
+      }
+    />
+  )}
+
+  <main className="flex-1 md:ml-64 min-h-screen overflow-auto">
+    <div className="p-4 md:p-8 max-w-6xl mx-auto">
       {children}
     </div>
   </main>
