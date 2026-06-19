@@ -96,7 +96,11 @@ export async function listWords(uid: string, opts?: { search?: string; difficult
   
   if (opts?.search) {
     const s = opts.search.toLowerCase();
-    words = words.filter((w) => w.term.toLowerCase().includes(s) || w.definition.toLowerCase().includes(s) || (w.synonyms ?? []).some((syn) => syn.toLowerCase().includes(s)));
+    words = words.filter((w) => 
+      w.term.toLowerCase().includes(s) || 
+      w.definition.toLowerCase().includes(s) || 
+      (w.synonyms ?? []).some((syn) => syn.toLowerCase().includes(s))
+    );
   }
   
   if (opts?.difficulty) {
@@ -112,16 +116,15 @@ export async function listWords(uid: string, opts?: { search?: string; difficult
     words = words.filter((w) => {
       const created = new Date(w.createdAt); 
       const diff = Math.floor((now.getTime() - created.getTime()) / 86400000);
-      switch (opts.createdFilter) { 
-        case "today": return diff === 0; 
-        case "yesterday": return diff === 1; 
-        case "3days": return diff <= 3; 
-        case "7days": return diff <= 7; 
-        case "30days": return diff <= 30; 
-        default: return true; 
-      }
+      if (opts.createdFilter === "today") return diff === 0;
+      if (opts.createdFilter === "yesterday") return diff === 1;
+      if (opts.createdFilter === "3days") return diff <= 3;
+      if (opts.createdFilter === "7days") return diff <= 7;
+      if (opts.createdFilter === "30days") return diff <= 30;
+      return true;
     });
   }
+  
   return words;
 }
 
@@ -215,22 +218,7 @@ export async function createGroup(uid: string, name: string, parentId: string | 
   const ref = doc(groupsCol(uid)); 
   await setDoc(ref, { name, parentId, path: [], wordCount: 0, childrenCount: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }); 
   return ref.id;
-}
-
-export async function listGroups(uid: string): Promise<Group[]> { 
-  const snap = await getDocs(groupsCol(uid)); 
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }) as Group); 
-}
-
-export async function updateGroup(uid: string, groupId: string, data: Partial<Group>) { 
-  await updateDoc(doc(db, "users", uid, "groups", groupId), { ...data, updatedAt: new Date().toISOString() }); 
-}
-
-export async function deleteGroup(uid: string, groupId: string) {
-  return words;
-}
-
-export async function findDuplicate(uid: string, input: WordInput): Promise<Word | null> {
+dInput): Promise<Word | null> {
   const snap = await getDocs(wordsCol(uid)); const normalize = (s: string) => s.trim().toLowerCase();
   for (const d of snap.docs) { const w = toWord(d.id, d.data()); if (normalize(w.term) === normalize(input.term)) return w; }
   return null;
