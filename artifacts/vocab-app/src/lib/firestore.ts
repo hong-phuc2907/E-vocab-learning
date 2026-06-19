@@ -213,13 +213,8 @@ return newStreak;
 }
 
 function toWord(
-id: string,
-data: Record<
-string,
-any
-
-«»
-
+  id: string,
+  data: Record<string, any>
 ): Word {
 return {
 id,
