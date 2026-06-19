@@ -17,7 +17,7 @@ import Quiz from "@/pages/quiz";
 import Words from "@/pages/words";
 import WordNew from "@/pages/word-new";
 import WordDetail from "@/pages/word-detail";
-
+import GroupDetail from "@/pages/group-detail";
 import GroupsPage from "@/pages/groups";
 import GroupDetail from "@/pages/group-detail";
 
@@ -47,7 +47,10 @@ return (
     path="/groups"
     component={GroupsPage}
   />
-
+<Route
+  path="/groups"
+  component={GroupsPage}
+/>
   <Route path="/groups/:id">
     {(params) => (
       <GroupDetail
