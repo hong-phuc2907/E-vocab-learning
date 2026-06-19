@@ -8,9 +8,9 @@ import {
   getGroup,
   getChildGroups,
   getWordsInGroup,
-  createGroupAdvanced,
   listWords,
   addWordToGroup,
+  createGroupAdvanced,
   type Group,
   type Word,
 } from "@/lib/firestore";
@@ -82,10 +82,7 @@ export default function GroupDetail({
           user.uid,
           g.parentId
         );
-
       setParentGroup(parent);
-    } else {
-      setParentGroup(null);
     }
   }
 
@@ -94,9 +91,7 @@ export default function GroupDetail({
   }, [user, id]);
 
   async function createSubGroup() {
-    if (!user) return;
-
-    if (!groupName.trim())
+    if (!user || !groupName.trim())
       return;
 
     await createGroupAdvanced(
@@ -106,7 +101,6 @@ export default function GroupDetail({
     );
 
     setGroupName("");
-
     load();
   }
 
@@ -122,21 +116,7 @@ export default function GroupDetail({
     }
 
     setSelectedWords([]);
-
     load();
-  }
-
-  function toggleWord(
-    wordId: string
-  ) {
-    setSelectedWords((prev) =>
-      prev.includes(wordId)
-        ? prev.filter(
-            (x) =>
-              x !== wordId
-          )
-        : [...prev, wordId]
-    );
   }
 
   const availableWords =
@@ -153,11 +133,7 @@ export default function GroupDetail({
         (
           w.term +
           " " +
-          w.definition +
-          " " +
-          (w.synonyms ?? []).join(
-            " "
-          )
+          w.definition
         )
           .toLowerCase()
           .includes(
@@ -201,14 +177,91 @@ export default function GroupDetail({
           </h1>
         </div>
 
+        {/* TỪ TRONG NHÓM */}
+
         <Card>
           <CardHeader>
             <CardTitle>
-              Tạo nhóm con
+              📚 Từ trong nhóm (
+              {groupWords.length})
             </CardTitle>
           </CardHeader>
 
-          <CardContent className="space-y-3">
+          <CardContent>
+
+            {groupWords.length === 0 && (
+              <p className="text-muted-foreground">
+                Chưa có từ nào
+              </p>
+            )}
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+
+              {groupWords.map(
+                (word) => (
+                  <div
+                    key={word.id}
+                    className="border rounded-xl p-4 hover:shadow-md transition"
+                  >
+                    <p className="font-semibold">
+                      {word.term}
+                    </p>
+
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {
+                        word.definition
+                      }
+                    </p>
+                  </div>
+                )
+              )}
+
+            </div>
+
+          </CardContent>
+        </Card>
+
+        {/* NHÓM CON */}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              📁 Nhóm con
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent>
+
+            <div className="flex flex-wrap gap-2">
+
+              {children.map(
+                (g) => (
+                  <Link
+                    key={g.id}
+                    href={`/groups/${g.id}`}
+                  >
+                    <div className="border rounded-lg px-3 py-2 hover:bg-muted cursor-pointer">
+                      📁 {g.name}
+                    </div>
+                  </Link>
+                )
+              )}
+
+              {children.length === 0 && (
+                <p className="text-muted-foreground">
+                  Chưa có nhóm con
+                </p>
+              )}
+
+            </div>
+
+          </CardContent>
+        </Card>
+
+        {/* TẠO NHÓM CON */}
+
+        <Card>
+          <CardContent className="pt-6 flex gap-2">
 
             <Input
               placeholder="Tên nhóm con"
@@ -225,92 +278,18 @@ export default function GroupDetail({
                 createSubGroup
               }
             >
-              Tạo nhóm con
+              Tạo
             </Button>
 
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Nhóm con
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent>
-
-            {children.length === 0 && (
-              <p>
-                Chưa có nhóm con
-              </p>
-            )}
-
-            <div className="grid md:grid-cols-3 gap-3">
-
-              {children.map(
-                (g) => (
-                  <Link
-                    key={g.id}
-                    href={`/groups/${g.id}`}
-                  >
-                    <div className="border rounded-xl p-4 hover:bg-muted cursor-pointer">
-                      📁 {g.name}
-                    </div>
-                  </Link>
-                )
-              )}
-
-            </div>
-
-          </CardContent>
-        </Card>
+        {/* THÊM TỪ */}
 
         <Card>
           <CardHeader>
             <CardTitle>
-              Từ trong nhóm
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent>
-
-            {groupWords.length === 0 && (
-              <p>
-                Chưa có từ nào
-              </p>
-            )}
-
-            <div className="space-y-2">
-
-              {groupWords.map(
-                (word) => (
-                  <div
-                    key={word.id}
-                    className="border rounded-lg p-3"
-                  >
-                    <p className="font-medium">
-                      {word.term}
-                    </p>
-
-                    <p className="text-sm text-muted-foreground">
-                      {
-                        word.definition
-                      }
-                    </p>
-                  </div>
-                )
-              )}
-
-            </div>
-
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Thêm từ vào nhóm
+              ➕ Thêm từ
             </CardTitle>
           </CardHeader>
 
@@ -326,13 +305,13 @@ export default function GroupDetail({
               }
             />
 
-            <div className="space-y-2 mt-4 max-h-[400px] overflow-auto">
+            <div className="max-h-48 overflow-auto mt-3 space-y-2">
 
               {filteredWords.map(
                 (word) => (
                   <label
                     key={word.id}
-                    className="flex gap-3 border rounded-lg p-3"
+                    className="flex gap-2 border rounded-lg p-2"
                   >
                     <input
                       type="checkbox"
@@ -340,8 +319,22 @@ export default function GroupDetail({
                         word.id
                       )}
                       onChange={() =>
-                        toggleWord(
-                          word.id
+                        setSelectedWords(
+                          (prev) =>
+                            prev.includes(
+                              word.id
+                            )
+                              ? prev.filter(
+                                  (
+                                    x
+                                  ) =>
+                                    x !==
+                                    word.id
+                                )
+                              : [
+                                  ...prev,
+                                  word.id,
+                                ]
                         )
                       }
                     />
@@ -351,7 +344,7 @@ export default function GroupDetail({
                         {word.term}
                       </p>
 
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         {
                           word.definition
                         }
@@ -364,7 +357,7 @@ export default function GroupDetail({
             </div>
 
             <Button
-              className="mt-4"
+              className="mt-3"
               onClick={addWords}
             >
               Thêm vào nhóm
