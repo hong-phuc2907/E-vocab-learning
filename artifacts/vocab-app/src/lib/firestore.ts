@@ -253,3 +253,34 @@ w.definition
 .includes(s)
 );
 }
+export async function addWordToGroup(
+  uid: string,
+  wordId: string,
+  groupId: string
+) {
+  const ref = doc(
+    db,
+    "users",
+    uid,
+    "words",
+    wordId
+  );
+
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) return;
+
+  const data = snap.data();
+
+  const groupIds = [
+    ...(data.groupIds ?? [])
+  ];
+
+  if (!groupIds.includes(groupId)) {
+    groupIds.push(groupId);
+  }
+
+  await updateDoc(ref, {
+    groupIds,
+  });
+}
