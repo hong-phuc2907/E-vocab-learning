@@ -50,21 +50,30 @@ try {
 useEffect(() => {
 loadData();
 }, [user]);
-
 async function handleCreateGroup() {
-if (!user || !groupName.trim()) return;
+  if (!user || !groupName.trim()) return;
 
-await createGroup(
-  user.uid,
-  groupName,
-  parentId
-);
+  try {
+    console.log("User:", user.uid);
 
-setGroupName("");
-setParentId(null);
+    const result = await createGroup(
+      user.uid,
+      groupName,
+      parentId
+    );
 
-loadData();
+    console.log("Created group:", result);
 
+    alert("Tạo nhóm thành công");
+
+    setGroupName("");
+    setParentId(null);
+
+    await loadData();
+  } catch (error) {
+    console.error(error);
+    alert(JSON.stringify(error));
+  }
 }
 
 function toggleWord(id: string) {
