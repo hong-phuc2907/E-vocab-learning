@@ -119,11 +119,11 @@ return (
         </p>
       </div>
 
-      <img
-        src="/mascot.png"
-        alt="Mascot"
-        className="w-40 h-40 select-none"
-      />
+    <img
+  src="/mascot.png"
+  alt="Mascot"
+  className="w-40 h-40 select-none object-contain rounded-2xl shadow-lg"
+/>
     </div>
 
     <div className="grid grid-cols-3 gap-6">
@@ -176,10 +176,10 @@ return (
         <div className="bg-primary/5 border border-primary/15 rounded-2xl px-5 py-4 flex gap-4 items-center">
 
           <img
-            src="/mascot.png"
-            alt=""
-            className="w-24 h-24"
-          />
+  src="/mascot.png"
+  alt=""
+  className="w-24 h-24 object-contain rounded-xl"
+/>
 
           <div>
             <p className="text-sm font-medium text-primary">
