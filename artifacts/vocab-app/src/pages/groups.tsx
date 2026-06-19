@@ -6,6 +6,7 @@ import {
 createGroup,
 listGroups,
 listWords,
+addWordToGroup,
 type Group,
 type Word,
 } from "@/lib/firestore";
@@ -35,45 +36,59 @@ const [selectedWords, setSelectedWords] = useState<string[]>([]);
 async function loadData() {
 if (!user) return;
 
-try {
-  const g = await listGroups(user.uid);
-  const w = await listWords(user.uid);
+const [g, w] = await Promise.all([
+  listGroups(user.uid),
+  listWords(user.uid),
+]);
 
-  setGroups(g);
-  setWords(w);
-} catch (err) {
-  console.error(err);
-}
+setGroups(g);
+setWords(w);
 
 }
 
 useEffect(() => {
 loadData();
 }, [user]);
+
 async function handleCreateGroup() {
-  if (!user || !groupName.trim()) return;
+if (!user || !groupName.trim()) return;
 
-  try {
-    console.log("User:", user.uid);
+await createGroup(
+  user.uid,
+  groupName,
+  parentId
+);
 
-    const result = await createGroup(
+setGroupName("");
+setParentId(null);
+
+loadData();
+
+}
+
+async function handleAddWords() {
+if (!user) return;
+
+if (!parentId) {
+  alert("Hãy chọn nhóm");
+  return;
+}
+
+try {
+  for (const wordId of selectedWords) {
+    await addWordToGroup(
       user.uid,
-      groupName,
+      wordId,
       parentId
     );
-
-    console.log("Created group:", result);
-
-    alert("Tạo nhóm thành công");
-
-    setGroupName("");
-    setParentId(null);
-
-    await loadData();
-  } catch (error) {
-    console.error(error);
-    alert(JSON.stringify(error));
   }
+
+  alert("Đã thêm từ vào nhóm");
+} catch (err) {
+  console.error(err);
+  alert("Lỗi khi thêm từ");
+}
+
 }
 
 function toggleWord(id: string) {
@@ -106,6 +121,7 @@ return (
       </CardHeader>
 
       <CardContent className="space-y-3">
+
         <Input
           placeholder="Tên nhóm"
           value={groupName}
@@ -123,6 +139,7 @@ return (
         <Button onClick={handleCreateGroup}>
           Tạo nhóm
         </Button>
+
       </CardContent>
     </Card>
 
@@ -132,16 +149,17 @@ return (
       </CardHeader>
 
       <CardContent>
-        <div className="space-y-2">
 
-          {groups.length === 0 && (
-            <p>Chưa có nhóm nào</p>
-          )}
+        {groups.length === 0 && (
+          <p>Chưa có nhóm nào</p>
+        )}
+
+        <div className="space-y-2">
 
           {groups.map((group) => (
             <div
               key={group.id}
-              className="border rounded-lg p-3 flex justify-between"
+              className="border rounded-lg p-3 flex justify-between items-center"
             >
               <div>
                 <p className="font-medium">
@@ -158,15 +176,21 @@ return (
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() =>
-                  setParentId(group.id)
-                }
+                onClick={() => {
+                  setParentId(group.id);
+
+                  alert(
+                    "Đang tạo nhóm con của: " +
+                      group.name
+                  );
+                }}
               >
-                Nhóm con
+                Tạo nhóm con
               </Button>
             </div>
           ))}
         </div>
+
       </CardContent>
     </Card>
 
@@ -176,28 +200,31 @@ return (
       </CardHeader>
 
       <CardContent>
+
         <Input
-          placeholder="Nhập tiếng Anh hoặc tiếng Việt"
+          placeholder="Nhập từ..."
           value={search}
           onChange={(e) =>
             setSearch(e.target.value)
           }
         />
+
       </CardContent>
     </Card>
 
     <Card>
       <CardHeader>
-        <CardTitle>Kết quả</CardTitle>
+        <CardTitle>Danh sách từ</CardTitle>
       </CardHeader>
 
       <CardContent>
+
         <div className="space-y-2 max-h-[400px] overflow-auto">
 
           {filteredWords.map((word) => (
             <label
               key={word.id}
-              className="border rounded-lg p-3 flex gap-3 cursor-pointer"
+              className="border rounded-lg p-3 flex gap-3"
             >
               <input
                 type="checkbox"
@@ -217,21 +244,26 @@ return (
                 <p className="text-sm text-muted-foreground">
                   {word.definition}
                 </p>
-
-                {(word.synonyms ?? []).length >
-                  0 && (
-                  <p className="text-xs text-blue-600">
-                    {word.synonyms?.join(", ")}
-                  </p>
-                )}
               </div>
             </label>
           ))}
         </div>
 
-        <div className="mt-4">
-          Đã chọn: {selectedWords.length} từ
+        <div className="mt-4 border-t pt-4">
+
+          <p>
+            Đã chọn {selectedWords.length} từ
+          </p>
+
+          <Button
+            className="mt-3"
+            onClick={handleAddWords}
+          >
+            Thêm từ vào nhóm
+          </Button>
+
         </div>
+
       </CardContent>
     </Card>
 
@@ -239,4 +271,4 @@ return (
 </Layout>
 
 );
-                  }
+}
