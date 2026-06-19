@@ -122,7 +122,7 @@ return (
       <img
         src="/mascot.png"
         alt="Mascot"
-        className="w-20 h-20 select-none"
+        className="w-40 h-40 select-none"
       />
     </div>
 
@@ -178,7 +178,7 @@ return (
           <img
             src="/mascot.png"
             alt=""
-            className="w-14 h-14"
+            className="w-24 h-24"
           />
 
           <div>
