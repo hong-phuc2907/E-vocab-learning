@@ -50,7 +50,13 @@ export async function updateStreak(uid: string): Promise<number> {
   await updateDoc(ref, { currentStreak: newStreak, lastStudiedDate: today });
   return newStreak;
 }
+export interface Group {
+  id: string;
+  name: string;
+  parentId: string | null;
 
+  createdAt: string;
+}
 export interface Word {
   id: string;
   term: string;
@@ -323,4 +329,27 @@ export async function getStats(uid: string): Promise<Stats> {
   const streakAlive = lastStudied === today || lastStudied === yesterday;
   const currentStreak = streakAlive ? (meta?.currentStreak ?? 0) : 0;
   return { totalWords, masteredWords, dueForReview, accuracy, currentStreak };
+  export async function createGroup(
+  uid: string,
+  name: string,
+  parentId: string | null = null
+) {
+  const ref = doc(
+    collection(
+      db,
+      "users",
+      uid,
+      "groups"
+    )
+  );
+
+  await setDoc(ref, {
+    name,
+    parentId,
+    createdAt:
+      new Date().toISOString(),
+  });
+
+  return ref.id;
+  }
 }
