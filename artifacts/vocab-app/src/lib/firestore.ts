@@ -21,21 +21,21 @@ export interface Word { id: string; term: string; definition: string; synonyms?:
 export interface WordInput { term: string; definition: string; synonyms?: string[]; groupIds?: string[]; partOfSpeech?: string; example?: string; pronunciation?: string; category?: string; difficulty?: "easy" | "medium" | "hard"; }
 export interface Stats { totalWords: number; masteredWords: number; dueForReview: number; accuracy: number; currentStreak: number; }
 export async function updateWord(
-  userId: string,
+  uid: string,
   wordId: string,
-  updates: Partial<Word>
+  data: Partial<WordInput>
 ) {
-  const ref = doc(
-    db,
-    "users",
-    userId,
-    "words",
-    wordId
-  );
-
   await updateDoc(
-    ref,
-    updates
+    doc(
+      db,
+      "users",
+      uid,
+      "words",
+      wordId
+    ),
+    {
+      ...data,
+    }
   );
 }
 
