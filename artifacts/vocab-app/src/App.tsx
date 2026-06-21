@@ -25,32 +25,27 @@ import WordEdit from "@/pages/word-edit";
 import GroupsPage from "@/pages/groups";
 import GroupDetail from "@/pages/group-detail";
 
-const queryClient =
-  new QueryClient();
+const queryClient = new QueryClient();
 
 function Router() {
   return (
     <Switch>
 
-      {/* Trang chủ */}
       <Route
         path="/"
         component={Home}
       />
 
-      {/* Học */}
       <Route
         path="/study"
         component={Study}
       />
 
-      {/* Quiz */}
       <Route
         path="/quiz"
         component={Quiz}
       />
 
-      {/* Nhóm */}
       <Route
         path="/groups"
         component={GroupsPage}
@@ -58,13 +53,10 @@ function Router() {
 
       <Route path="/groups/:id">
         {(params) => (
-          <GroupDetail
-            id={params.id}
-          />
+          <GroupDetail id={params.id} />
         )}
       </Route>
 
-      {/* Từ vựng */}
       <Route
         path="/words"
         component={Words}
@@ -75,25 +67,18 @@ function Router() {
         component={WordNew}
       />
 
-      {/* Sửa từ */}
-      <Route path="/words/:id/edit">
+      <Route path="/words/edit/:id">
         {(params) => (
-          <WordEdit
-            id={params.id}
-          />
+          <WordEdit id={params.id} />
         )}
       </Route>
 
-      {/* Chi tiết từ */}
       <Route path="/words/:id">
         {(params) => (
-          <WordDetail
-            id={params.id}
-          />
+          <WordDetail id={params.id} />
         )}
       </Route>
 
-      {/* 404 */}
       <Route>
         <div className="min-h-screen flex items-center justify-center">
           <h1 className="text-2xl font-bold">
@@ -131,9 +116,7 @@ function AppShell() {
 
 export default function App() {
   return (
-    <QueryClientProvider
-      client={queryClient}
-    >
+    <QueryClientProvider client={queryClient}>
       <TooltipProvider>
 
         <AuthProvider>
