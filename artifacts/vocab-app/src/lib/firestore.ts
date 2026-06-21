@@ -20,7 +20,134 @@ export interface GroupNode extends Group { subGroups: GroupNode[]; words: Word[]
 export interface Word { id: string; term: string; definition: string; synonyms?: string[]; groupIds?: string[]; partOfSpeech?: string; example?: string; pronunciation?: string; category?: string; difficulty?: "easy" | "medium" | "hard"; masteryLevel: number; reviewCount: number; correctCount: number; lastReviewedAt?: string | null; nextReviewAt?: string | null; createdAt: string; }
 export interface WordInput { term: string; definition: string; synonyms?: string[]; groupIds?: string[]; partOfSpeech?: string; example?: string; pronunciation?: string; category?: string; difficulty?: "easy" | "medium" | "hard"; }
 export interface Stats { totalWords: number; masteredWords: number; dueForReview: number; accuracy: number; currentStreak: number; }
+/* ================= EDIT WORD ================= */
 
+export async function updateWord(
+  uid: string,
+  wordId: string,
+  data: Partial<WordInput>
+) {
+  await updateDoc(
+    doc(db, "users", uid, "words", wordId),
+    {
+      ...data,
+    }
+  );
+}
+
+/* ================= GROUP HELPERS ================= */
+
+export async function getAllChildGroupIds(
+  uid: string,
+  parentId: string
+): Promise<string[]> {
+  const groups = await listGroups(uid);
+
+  const result: string[] = [];
+
+  function dfs(id: string) {
+    result.push(id);
+
+    groups
+      .filter((g) => g.parentId === id)
+      .forEach((g) => dfs(g.id));
+  }
+
+  dfs(parentId);
+
+  return result;
+}
+
+export async function getWordsByGroups(
+  uid: string,
+  groupIds: string[]
+): Promise<Word[]> {
+  const words = await listWords(uid);
+
+  return words.filter((word) =>
+    (word.groupIds ?? []).some((id) =>
+      groupIds.includes(id)
+    )
+  );
+}
+
+export async function getWordsInGroupTree(
+  uid: string,
+  groupId: string
+): Promise<Word[]> {
+  const ids = await getAllChildGroupIds(
+    uid,
+    groupId
+  );
+
+  return getWordsByGroups(uid, ids);
+}
+
+/* ================= QUIZ GROUP ================= */
+
+export async function getQuizWords(
+  uid: string,
+  groupId?: string
+): Promise<Word[]> {
+  if (!groupId) {
+    return listWords(uid);
+  }
+
+  return getWordsInGroupTree(
+    uid,
+    groupId
+  );
+}
+
+/* ================= WORD GROUP ================= */
+
+export async function moveWordToGroup(
+  uid: string,
+  wordId: string,
+  groupId: string
+) {
+  const ref = doc(
+    db,
+    "users",
+    uid,
+    "words",
+    wordId
+  );
+
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) return;
+
+  await updateDoc(ref, {
+    groupIds: [groupId],
+  });
+}
+
+export async function removeWordCompletelyFromGroup(
+  uid: string,
+  wordId: string,
+  groupId: string
+) {
+  const ref = doc(
+    db,
+    "users",
+    uid,
+    "words",
+    wordId
+  );
+
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) return;
+
+  const data = snap.data();
+
+  await updateDoc(ref, {
+    groupIds: (data.groupIds ?? []).filter(
+      (id: string) => id !== groupId
+    ),
+  });
+}
 function wordsCol(uid: string) { 
   return collection(db, "users", uid, "words"); 
 }
