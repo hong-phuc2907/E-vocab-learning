@@ -6,13 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Trash2, BookOpen } from "lucide-react";
+import { ArrowLeft, Trash2, BookOpen, Edit } from "lucide-react";
 import { Link, useLocation } from "wouter";
-<Button asChild>
-  <Link href={`/words/${word.id}/edit`}>
-    Chỉnh sửa
-  </Link>
-</Button>
+
 const DIFF_LABELS: Record<string, string> = { easy: "Dễ", medium: "Trung bình", hard: "Khó" };
 const POS_LABELS: Record<string, string> = {
   noun: "Danh từ", verb: "Động từ", adjective: "Tính từ", adverb: "Trạng từ",
@@ -86,9 +82,14 @@ export default function WordDetail({ id }: { id: string }) {
           <Button variant="ghost" asChild className="-ml-2">
             <Link href="/words"><ArrowLeft className="w-4 h-4 mr-2" /> Quay lại</Link>
           </Button>
-          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={handleDelete}>
-            <Trash2 className="w-4 h-4 mr-2" /> Xóa
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/words/edit/${id}`}><Edit className="w-4 h-4 mr-2" /> Chỉnh sửa</Link>
+            </Button>
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={handleDelete}>
+              <Trash2 className="w-4 h-4 mr-2" /> Xóa
+            </Button>
+          </div>
         </div>
 
         <Card className="border-2 border-card-border">
