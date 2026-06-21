@@ -972,12 +972,43 @@ export default function Quiz() {
               </h2>
 
               <div className="grid grid-cols-2 gap-3">
-                {multiOptions.map(
-                  (word) => {
-                    const checked =
-                      selectedWords.includes(
-                        word
-                      );
+                {multiOptions.map((word) => {
+  const checked =
+    selectedWords.includes(word);
+
+  const isCorrect =
+    currentQ.correctWords.includes(word);
+
+  let cls =
+    "p-3 rounded-lg border ";
+
+  if (multiChecked) {
+    if (checked && isCorrect)
+      cls +=
+        "bg-green-100 border-green-500";
+    else if (
+      checked &&
+      !isCorrect
+    )
+      cls +=
+        "bg-red-100 border-red-500";
+    else
+      cls +=
+        "opacity-50";
+  }
+
+  return (
+    <button
+      key={word}
+      className={cls}
+      onClick={() =>
+        toggleMultiWord(word)
+      }
+    >
+      {word}
+    </button>
+  );
+})}
 
                     const isCorrect =
                       currentQ.correctWords.includes(
