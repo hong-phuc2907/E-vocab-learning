@@ -12,7 +12,7 @@ import { Trash2, Plus, Search, BookOpen } from "lucide-react";
 import { Link } from "wouter";
 
 const DIFF_LABELS: Record<string, string> = { easy: "Dễ", medium: "Trung bình", hard: "Khó" };
-const  POS_LABELS: Record<string,string> = {
+const POS_LABELS: Record<string, string> = {
   noun: "Danh từ",
   verb: "Động từ",
   adjective: "Tính từ",
@@ -21,7 +21,6 @@ const  POS_LABELS: Record<string,string> = {
   conjunction: "Liên từ",
   pronoun: "Đại từ",
   interjection: "Thán từ",
-
   phrase: "Cụm từ",
   idiom: "Thành ngữ",
   collocation: "Collocation",
@@ -51,15 +50,23 @@ export default function Words() {
   const load = useCallback(async () => {
     if (!user) return;
     setIsLoading(true);
-    const ws = await listWords(user.uid, {
-      search: debouncedSearch || undefined,
-      difficulty: difficulty === "all" ? undefined : difficulty,
-    });
-    setWords(ws);
-    setIsLoading(false);
+    try {
+      const ws = await listWords(user.uid, {
+        search: debouncedSearch || undefined,
+        difficulty: difficulty === "all" ? undefined : difficulty,
+      });
+      setWords(ws || []);
+    } catch (error) {
+      console.error("Lỗi tải danh sách từ vựng:", error);
+      setWords([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, [user, debouncedSearch, difficulty]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { 
+    load(); 
+  }, [load]);
 
   const handleSearch = (val: string) => {
     setSearch(val);
@@ -69,8 +76,12 @@ export default function Words() {
 
   const handleDelete = async (id: string) => {
     if (!user || !confirm("Xóa từ này khỏi bộ sưu tập?")) return;
-    await fsDeleteWord(user.uid, id);
-    load();
+    try {
+      await fsDeleteWord(user.uid, id);
+      load();
+    } catch (error) {
+      console.error("Lỗi xóa từ vựng:", error);
+    }
   };
 
   return (
@@ -80,7 +91,7 @@ export default function Words() {
           <div>
             <h1 className="text-3xl font-serif font-bold">Từ vựng</h1>
             <p className="text-muted-foreground mt-1">
-              {words ? `${words.length} từ` : ""}
+              {Array.isArray(words) ? `${words.length} từ` : "0 từ"}
             </p>
           </div>
           <Button asChild>
@@ -119,7 +130,7 @@ export default function Words() {
               <Skeleton key={i} className="h-20 w-full rounded-xl" />
             ))}
           </div>
-        ) : words.length === 0 ? (
+        ) : !Array.isArray(words) || words.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
               <BookOpen className="w-8 h-8 text-muted-foreground" />
@@ -138,41 +149,46 @@ export default function Words() {
           </div>
         ) : (
           <div className="space-y-3">
-            {words.map((word) => (
-              <Card key={word.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-5 flex items-center gap-4">
-                  <Link href={`/words/${word.id}`} className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <h3 className="text-lg font-serif font-semibold text-foreground">{word.term}</h3>
-                      {word.partOfSpeech && (
-                        <span className="text-xs text-muted-foreground italic">{POS_LABELS[word.partOfSpeech] ?? word.partOfSpeech}</span>
-                      )}
-                      {word.difficulty && (
-                        <Badge variant={word.difficulty === "hard" ? "destructive" : word.difficulty === "easy" ? "secondary" : "outline"} className="text-xs">
-                          {DIFF_LABELS[word.difficulty] ?? word.difficulty}
-                        </Badge>
-                      )}
-                      {word.category && <Badge variant="outline" className="text-xs">{word.category}</Badge>}
-                      {word.masteryLevel >= 5 && (
-                        <Badge className="text-xs bg-green-100 text-green-700 border-green-200">Thành thạo</Badge>
-                      )}
-                    </div>
-                    <p className="text-muted-foreground text-sm mt-1 truncate">{word.definition}</p>
-                    <div className="mt-2">
-                      <MasteryDots level={word.masteryLevel} />
-                    </div>
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground hover:text-destructive shrink-0"
-                    onClick={() => handleDelete(word.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+            {words.map((word) => {
+              if (!word || !word.id) return null;
+              return (
+                <Card key={word.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-5 flex items-center gap-4">
+                    <Link href={`/words/${word.id}`} className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <h3 className="text-lg font-serif font-semibold text-foreground">{word.term || ""}</h3>
+                        {word.partOfSpeech && (
+                          <span className="text-xs text-muted-foreground italic">
+                            {POS_LABELS[word.partOfSpeech] ?? word.partOfSpeech}
+                          </span>
+                        )}
+                        {word.difficulty && (
+                          <Badge variant={word.difficulty === "hard" ? "destructive" : word.difficulty === "easy" ? "secondary" : "outline"} className="text-xs">
+                            {DIFF_LABELS[word.difficulty] ?? word.difficulty}
+                          </Badge>
+                        )}
+                        {word.category && <Badge variant="outline" className="text-xs">{word.category}</Badge>}
+                        {word.masteryLevel >= 5 && (
+                          <Badge className="text-xs bg-green-100 text-green-700 border-green-200">Thành thạo</Badge>
+                        )}
+                      </div>
+                      <p className="text-muted-foreground text-sm mt-1 truncate">{word.definition || ""}</p>
+                      <div className="mt-2">
+                        <MasteryDots level={word.masteryLevel || 0} />
+                      </div>
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground hover:text-destructive shrink-0"
+                      onClick={() => handleDelete(word.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
