@@ -8,7 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Trash2, BookOpen } from "lucide-react";
 import { Link, useLocation } from "wouter";
-
+<Button asChild>
+  <Link href={`/words/${word.id}/edit`}>
+    Chỉnh sửa
+  </Link>
+</Button>
 const DIFF_LABELS: Record<string, string> = { easy: "Dễ", medium: "Trung bình", hard: "Khó" };
 const POS_LABELS: Record<string, string> = {
   noun: "Danh từ", verb: "Động từ", adjective: "Tính từ", adverb: "Trạng từ",
