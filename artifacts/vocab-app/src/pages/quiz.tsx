@@ -382,7 +382,8 @@ export default function Quiz() {
                 )
               ];
           }
-          const filteredWords = useMemo(() => {
+
+        const filteredWords = useMemo(() => {
     let words = [...allWords];
 
     // Lọc theo nhóm (bao gồm nhóm con)
