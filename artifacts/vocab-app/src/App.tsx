@@ -30,78 +30,69 @@ const queryClient = new QueryClient();
 function Router() {
   return (
     <Switch>
+      {/* SỬA LỖI CHÍ MẠNG: Chuyển toàn bộ component={...} sang dạng lồng chuẩn React */}
+      <Route path="/">
+        <Home />
+      </Route>
 
-      <Route
-        path="/"
-        component={Home}
-      />
+      <Route path="/study">
+        <Study />
+      </Route>
 
-      <Route
-        path="/study"
-        component={Study}
-      />
+      <Route path="/quiz">
+        <Quiz />
+      </Route>
 
-      <Route
-        path="/quiz"
-        component={Quiz}
-      />
-
-      <Route
-        path="/groups"
-        component={GroupsPage}
-      />
+      <Route path="/groups">
+        <GroupsPage />
+      </Route>
 
       <Route path="/groups/:id">
         {(params) => (
-          <GroupDetail id={params.id} />
+          <GroupDetail id={params.id ?? ""} />
         )}
       </Route>
 
-      <Route
-        path="/words"
-        component={Words}
-      />
+      <Route path="/words">
+        <Words />
+      </Route>
 
-      <Route
-        path="/words/new"
-        component={WordNew}
-      />
+      <Route path="/words/new">
+        <WordNew />
+      </Route>
 
       <Route path="/words/edit/:id">
         {(params) => (
-          <WordEdit id={params.id} />
+          <WordEdit id={params.id ?? ""} />
         )}
       </Route>
 
       <Route path="/words/:id">
         {(params) => (
-          <WordDetail id={params.id} />
+          <WordDetail id={params.id ?? ""} />
         )}
       </Route>
 
+      {/* Trang 404 bảo vệ */}
       <Route>
-        <div className="min-h-screen flex items-center justify-center">
-          <h1 className="text-2xl font-bold">
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <h1 className="text-2xl font-bold text-foreground">
             404 - Không tìm thấy trang
           </h1>
         </div>
       </Route>
-
     </Switch>
   );
 }
 
 function AppShell() {
-  const {
-    user,
-    loading,
-  } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">
-          Đang tải...
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground font-medium">
+          Đang tải ứng dụng...
         </div>
       </div>
     );
@@ -118,13 +109,10 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-
         <AuthProvider>
           <AppShell />
         </AuthProvider>
-
         <Toaster />
-
       </TooltipProvider>
     </QueryClientProvider>
   );
