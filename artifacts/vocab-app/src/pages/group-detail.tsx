@@ -10,7 +10,7 @@ import {
   getWordsInGroup,
   listWords,
   addWordToGroup,
-  createGroupAdvanced,
+  createGroupAdvanced, // Hàm này nhận vào 1 object cấu trúc nâng cao
   type Group,
   type Word,
 } from "@/lib/firestore";
@@ -57,32 +57,35 @@ export default function GroupDetail({
     useState<string[]>([]);
 
   async function load() {
-    if (!user) return;
+    if (!user || !id) return;
 
-    const [
-      g,
-      childs,
-      wordsInGroup,
-      words,
-    ] = await Promise.all([
-      getGroup(user.uid, id),
-      getChildGroups(user.uid, id),
-      getWordsInGroup(user.uid, id),
-      listWords(user.uid),
-    ]);
+    try {
+      const [
+        g,
+        childs,
+        wordsInGroup,
+        words,
+      ] = await Promise.all([
+        getGroup(user.uid, id),
+        getChildGroups(user.uid, id),
+        getWordsInGroup(user.uid, id),
+        listWords(user.uid),
+      ]);
 
-    setGroup(g);
-    setChildren(childs);
-    setGroupWords(wordsInGroup);
-    setAllWords(words);
+      // Phòng vệ chống gán dữ liệu undefined vào State gây lỗi render React
+      setGroup(g ?? null);
+      setChildren(childs ?? []);
+      setGroupWords(wordsInGroup ?? []);
+      setAllWords(words ?? []);
 
-    if (g?.parentId) {
-      const parent =
-        await getGroup(
-          user.uid,
-          g.parentId
-        );
-      setParentGroup(parent);
+      if (g?.parentId) {
+        const parent = await getGroup(user.uid, g.parentId);
+        setParentGroup(parent ?? null);
+      } else {
+        setParentGroup(null);
+      }
+    } catch (error) {
+      console.error("Lỗi khi tải dữ liệu nhóm từ vựng:", error);
     }
   }
 
@@ -91,278 +94,201 @@ export default function GroupDetail({
   }, [user, id]);
 
   async function createSubGroup() {
-    if (!user || !groupName.trim())
-      return;
+    if (!user || !groupName.trim() || !id) return;
 
-    await createGroupAdvanced(
-      user.uid,
-      groupName,
-      id
-    );
+    try {
+      // SỬA LỖI 1: Truyền chuẩn Object vào hàm createGroupAdvanced tránh làm sập App
+      await createGroupAdvanced(user.uid, {
+        name: groupName.trim(),
+        parentId: id,
+        description: "",
+        color: "#000000",
+        icon: ""
+      });
 
-    setGroupName("");
-    load();
+      setGroupName("");
+      load();
+    } catch (error) {
+      console.error("Lỗi khi tạo nhóm con:", error);
+    }
   }
 
   async function addWords() {
-    if (!user) return;
+    if (!user || !id || selectedWords.length === 0) return;
 
-    for (const wordId of selectedWords) {
-      await addWordToGroup(
-        user.uid,
-        wordId,
-        id
-      );
+    try {
+      for (const wordId of selectedWords) {
+        await addWordToGroup(user.uid, wordId, id);
+      }
+      setSelectedWords([]);
+      load();
+    } catch (error) {
+      console.error("Lỗi khi thêm từ vào nhóm:", error);
     }
-
-    setSelectedWords([]);
-    load();
   }
 
-  const availableWords =
-    allWords.filter(
-      (w) =>
-        !groupWords.some(
-          (g) => g.id === w.id
-        )
-    );
+  // SỬA LỖI 2: Thêm lớp phòng vệ bọc mảng (?. và || []) ngăn chặn lỗi trắng màn hình triệt để
+  const safeAllWords = allWords ?? [];
+  const safeGroupWords = groupWords ?? [];
 
-  const filteredWords =
-    availableWords.filter(
-      (w) =>
-        (
-          w.term +
-          " " +
-          w.definition
-        )
-          .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          )
-    );
+  const availableWords = safeAllWords.filter(
+    (w) => w && !safeGroupWords.some((g) => g && g.id === w.id)
+  );
+
+  const filteredWords = availableWords.filter(
+    (w) =>
+      w &&
+      ((w.term ?? "") + " " + (w.definition ?? ""))
+        .toLowerCase()
+        .includes(search.toLowerCase())
+  );
 
   return (
     <Layout>
       <div className="space-y-6">
 
         <div className="flex gap-2">
-
           <Link href="/groups">
-            <Button
-              size="sm"
-              variant="outline"
-            >
+            <Button size="sm" variant="outline">
               🏠 Gốc
             </Button>
           </Link>
 
           {parentGroup && (
-            <Link
-              href={`/groups/${parentGroup.id}`}
-            >
-              <Button
-                size="sm"
-                variant="outline"
-              >
+            <Link href={`/groups/${parentGroup.id}`}>
+              <Button size="sm" variant="outline">
                 ⬅ Nhóm cha
               </Button>
             </Link>
           )}
-
         </div>
 
         <div>
           <h1 className="text-3xl font-bold">
-            📁 {group?.name}
+            📁 {group?.name || "Đang tải nhóm..."}
           </h1>
         </div>
 
         {/* TỪ TRONG NHÓM */}
-
         <Card>
           <CardHeader>
             <CardTitle>
-              📚 Từ trong nhóm (
-              {groupWords.length})
+              📚 Từ trong nhóm ({safeGroupWords.length})
             </CardTitle>
           </CardHeader>
 
           <CardContent>
-
-            {groupWords.length === 0 && (
-              <p className="text-muted-foreground">
-                Chưa có từ nào
-              </p>
+            {safeGroupWords.length === 0 && (
+              <p className="text-muted-foreground">Chưa có từ nào</p>
             )}
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-
-              {groupWords.map(
-                (word) => (
+              {safeGroupWords.map((word) => {
+                if (!word) return null;
+                return (
                   <div
                     key={word.id}
                     className="border rounded-xl p-4 hover:shadow-md transition"
                   >
-                    <p className="font-semibold">
-                      {word.term}
-                    </p>
-
+                    <p className="font-semibold">{word.term}</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {
-                        word.definition
-                      }
+                      {word.definition}
                     </p>
                   </div>
-                )
-              )}
-
+                );
+              })}
             </div>
-
           </CardContent>
         </Card>
 
         {/* NHÓM CON */}
-
         <Card>
           <CardHeader>
-            <CardTitle>
-              📁 Nhóm con
-            </CardTitle>
+            <CardTitle>📁 Nhóm con</CardTitle>
           </CardHeader>
 
           <CardContent>
-
             <div className="flex flex-wrap gap-2">
-
-              {children.map(
-                (g) => (
-                  <Link
-                    key={g.id}
-                    href={`/groups/${g.id}`}
-                  >
+              {(children ?? []).map((g) => {
+                if (!g) return null;
+                return (
+                  <Link key={g.id} href={`/groups/${g.id}`}>
                     <div className="border rounded-lg px-3 py-2 hover:bg-muted cursor-pointer">
                       📁 {g.name}
                     </div>
                   </Link>
-                )
-              )}
+                );
+              })}
 
-              {children.length === 0 && (
-                <p className="text-muted-foreground">
-                  Chưa có nhóm con
-                </p>
+              {(children ?? []).length === 0 && (
+                <p className="text-muted-foreground">Chưa có nhóm con</p>
               )}
-
             </div>
-
           </CardContent>
         </Card>
 
         {/* TẠO NHÓM CON */}
-
         <Card>
           <CardContent className="pt-6 flex gap-2">
-
             <Input
               placeholder="Tên nhóm con"
               value={groupName}
-              onChange={(e) =>
-                setGroupName(
-                  e.target.value
-                )
-              }
+              onChange={(e) => setGroupName(e.target.value)}
             />
-
-            <Button
-              onClick={
-                createSubGroup
-              }
-            >
-              Tạo
-            </Button>
-
+            <Button onClick={createSubGroup}>Tạo</Button>
           </CardContent>
         </Card>
 
         {/* THÊM TỪ */}
-
         <Card>
           <CardHeader>
-            <CardTitle>
-              ➕ Thêm từ
-            </CardTitle>
+            <CardTitle>➕ Thêm từ</CardTitle>
           </CardHeader>
 
           <CardContent>
-
             <Input
               placeholder="Tìm từ..."
               value={search}
-              onChange={(e) =>
-                setSearch(
-                  e.target.value
-                )
-              }
+              onChange={(e) => setSearch(e.target.value)}
             />
 
             <div className="max-h-48 overflow-auto mt-3 space-y-2">
-
-              {filteredWords.map(
-                (word) => (
+              {filteredWords.map((word) => {
+                if (!word) return null;
+                return (
                   <label
                     key={word.id}
-                    className="flex gap-2 border rounded-lg p-2"
+                    className="flex gap-2 border rounded-lg p-2 items-center"
                   >
                     <input
                       type="checkbox"
-                      checked={selectedWords.includes(
-                        word.id
-                      )}
+                      checked={selectedWords.includes(word.id)}
                       onChange={() =>
-                        setSelectedWords(
-                          (prev) =>
-                            prev.includes(
-                              word.id
-                            )
-                              ? prev.filter(
-                                  (
-                                    x
-                                  ) =>
-                                    x !==
-                                    word.id
-                                )
-                              : [
-                                  ...prev,
-                                  word.id,
-                                ]
+                        setSelectedWords((prev) =>
+                          prev.includes(word.id)
+                            ? prev.filter((x) => x !== word.id)
+                            : [...prev, word.id]
                         )
                       }
                     />
-
                     <div>
-                      <p className="font-medium">
-                        {word.term}
-                      </p>
-
+                      <p className="font-medium">{word.term}</p>
                       <p className="text-xs text-muted-foreground">
-                        {
-                          word.definition
-                        }
+                        {word.definition}
                       </p>
                     </div>
                   </label>
-                )
-              )}
-
+                );
+              })}
             </div>
 
             <Button
               className="mt-3"
               onClick={addWords}
+              disabled={selectedWords.length === 0}
             >
               Thêm vào nhóm
             </Button>
-
           </CardContent>
         </Card>
 
