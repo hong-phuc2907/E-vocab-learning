@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+
 import {
   Select,
   SelectContent,
@@ -23,41 +24,66 @@ import {
 } from "@/components/ui/select";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Plus, AlertCircle, Copy, Check, Search } from "lucide-react";
-import { Link, useLocation } from "wouter";
+
+import {
+  ArrowLeft,
+  Plus,
+  AlertCircle,
+  Copy,
+  Check,
+  Search,
+} from "lucide-react";
+
+import { Link } from "wouter";
 
 const POS_OPTIONS = [
-  { value: "Noun", label: "Danh từ" },
-  { value: "Verb", label: "Động từ" },
-  { value: "Adjective", label: "Tính từ" },
-  { value: "Adverb", label: "Trạng từ" },
-  { value: "Idiom", label: "Thành ngữ" }
+  { value: "noun", label: "Danh từ" },
+  { value: "verb", label: "Động từ" },
+  { value: "adjective", label: "Tính từ" },
+  { value: "adverb", label: "Trạng từ" },
+  { value: "idiom", label: "Thành ngữ" },
+  { value: "phrase", label: "Cụm từ" },
 ];
 
 export default function WordNew() {
   const { user } = useAuth();
-  const [, navigate] = useLocation();
 
-  const [isPending, setIsPending] = useState(false);
-  const [allWords, setAllWords] = useState<Word[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [isPending, setIsPending] =
+    useState(false);
 
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [groupSearch, setGroupSearch] = useState("");
-  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+  const [allWords, setAllWords] =
+    useState<Word[]>([]);
+
+  const [groups, setGroups] =
+    useState<Group[]>([]);
+
+  const [searchQuery, setSearchQuery] =
+    useState("");
+
+  const [groupSearch, setGroupSearch] =
+    useState("");
+
+  const [selectedGroups, setSelectedGroups] =
+    useState<string[]>([]);
+
+  const [duplicate, setDuplicate] =
+    useState<Word | null>(null);
+
+  const [errors, setErrors] =
+    useState<Record<string, string>>({});
 
   const [form, setForm] = useState({
     term: "",
     definition: "",
-    partOfSpeech: "", 
-    example: "",
     pronunciation: "",
+    example: "",
     category: "",
-    difficulty: "medium" as "easy" | "medium" | "hard",
+    partOfSpeech: "",
+    difficulty: "medium" as
+      | "easy"
+      | "medium"
+      | "hard",
   });
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [duplicate, setDuplicate] = useState<Word | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -65,380 +91,618 @@ export default function WordNew() {
     Promise.all([
       listWords(user.uid),
       listGroups(user.uid),
-    ])
-      .then(([words, groups]) => {
-        setAllWords(words);
-        setGroups(groups);
-      })
-      .catch(console.error);
+    ]).then(([words, groups]) => {
+      setAllWords(words);
+      setGroups(groups);
+    });
   }, [user]);
 
-  if (user === undefined) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-sm text-muted-foreground animate-pulse">Đang xác thực tài khoản...</p>
-      </div>
-    );
-  }
+  const setField =
+    (key: keyof typeof form) =>
+    (value: string) => {
+      setForm((prev) => ({
+        ...prev,
+        [key]: value,
+      }));
+    };
 
-  if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-3 p-4">
-        <AlertCircle className="w-8 h-8 text-destructive" />
-        <p className="text-sm font-medium text-destructive">Bạn cần đăng nhập để thêm từ vựng mới!</p>
-        <Link href="/login" className="text-sm text-primary underline">
-          Đi đến trang đăng nhập
-        </Link>
-      </div>
-    );
-  }
+  const parsePos = (
+    value: string
+  ): string[] => {
+    if (!value) return [];
 
-  const set = (key: keyof typeof form) => (value: any) => {
-    setForm((f) => ({ ...f, [key]: value }));
+    return value
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean);
   };
 
-  const parsePartsOfSpeech = (val: any): string[] => {
-    if (!val) return [];
-    if (Array.isArray(val)) return val.map(v => String(v).trim());
-    if (typeof val === "string") return val.split(",").map(v => v.trim()).filter(Boolean);
-    return [];
-  };
+  const togglePos = (
+    pos: string
+  ) => {
+    const current =
+      parsePos(form.partOfSpeech);
 
-  const handleTogglePos = (posValue: string) => {
-    const currentParts = parsePartsOfSpeech(form.partOfSpeech);
-    let newParts: string[];
+    let next: string[];
 
-    if (currentParts.includes(posValue)) {
-      newParts = currentParts.filter(item => item !== posValue);
+    if (current.includes(pos)) {
+      next = current.filter(
+        (x) => x !== pos
+      );
     } else {
-      newParts = [...currentParts, posValue];
+      next = [...current, pos];
     }
 
-    setForm(f => ({
-      ...f,
-      partOfSpeech: newParts.join(", ")
+    setForm((prev) => ({
+      ...prev,
+      partOfSpeech:
+        next.join(", "),
     }));
   };
 
-  const handleCopyWord = (wordId: string) => {
-    const source = allWords.find((w) => w.id === wordId);
-    if (!source) return;
+  const copyWordData = (
+    wordId: string
+  ) => {
+    const word =
+      allWords.find(
+        (w) => w.id === wordId
+      );
 
-    const rawPos = source.partOfSpeech;
-    const cleanPos = Array.isArray(rawPos) ? rawPos.join(", ") : String(rawPos || "");
+    if (!word) return;
 
-    setForm((f) => ({
-      ...f,
-      definition: source.definition || "",
-      example: source.example || "",
-      pronunciation: source.pronunciation || "",
-      partOfSpeech: cleanPos,
-      category: source.category || "",
-      difficulty: source.difficulty || "medium",
+    setForm((prev) => ({
+      ...prev,
+      definition:
+        word.definition || "",
+      pronunciation:
+        word.pronunciation || "",
+      example:
+        word.example || "",
+      category:
+        word.category || "",
+      difficulty:
+        word.difficulty ||
+        "medium",
+      partOfSpeech:
+        word.partOfSpeech || "",
     }));
+
+    setSearchQuery("");
   };
 
-  const filteredWords = allWords.filter((w) => {
-    if (!w || !w.term || typeof w.term !== "string") return false; 
-    
-    const query = searchQuery ? searchQuery.toLowerCase().trim() : "";
-    const termMatch = w.term.toLowerCase().includes(query);
-    const defMatch = w.definition && typeof w.definition === "string" 
-      ? w.definition.toLowerCase().includes(query) 
-      : false;
-      
-    return termMatch || defMatch;
-  });
+  const filteredWords =
+    allWords.filter((word) => {
+      const q =
+        searchQuery.toLowerCase();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
+      return (
+        word.term
+          .toLowerCase()
+          .includes(q) ||
+        word.definition
+          .toLowerCase()
+          .includes(q)
+      );
+    });
 
-    setDuplicate(null);
-    setErrors({});
-    setIsPending(true);
+  const handleSubmit =
+    async (
+      e: React.FormEvent
+    ) => {
+      e.preventDefault();
 
-    const newErrors: Record<string, string> = {};
-    if (!form.term || !form.term.trim()) newErrors.term = "Vui lòng nhập từ tiếng Anh";
-    if (!form.definition || !form.definition.trim()) newErrors.definition = "Vui lòng nhập nghĩa của từ";
+      if (!user) return;
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      setIsPending(false);
-      return;
-    }
+      setErrors({});
+      setDuplicate(null);
 
-    try {
-      const input: any = {
-        term: form.term.trim(),
-        definition: form.definition.trim(),
-        difficulty: form.difficulty,
-        groupIds: selectedGroups,
-      };
+      const err: Record<
+        string,
+        string
+      > = {};
 
-      if (form.partOfSpeech && form.partOfSpeech.trim()) input.partOfSpeech = form.partOfSpeech.trim();
-      if (form.example && form.example.trim()) input.example = form.example.trim();
-      if (form.pronunciation && form.pronunciation.trim()) input.pronunciation = form.pronunciation.trim();
-      if (form.category && form.category.trim()) input.category = form.category.trim();
+      if (!form.term.trim()) {
+        err.term =
+          "Vui lòng nhập từ";
+      }
 
-      const dup = await findDuplicate(user.uid, input);
-      if (dup) {
-        setDuplicate(dup);
-        setIsPending(false);
+      if (
+        !form.definition.trim()
+      ) {
+        err.definition =
+          "Vui lòng nhập nghĩa";
+      }
+
+      if (
+        Object.keys(err)
+          .length > 0
+      ) {
+        setErrors(err);
         return;
       }
 
-      await createWord(user.uid, input);
-      window.location.href = "/words";
-    } catch (error) {
-      console.error("Lỗi hệ thống khi thêm từ:", error);
-      setErrors({
-        submit: "Hệ thống gặp sự cố khi lưu dữ liệu. Vui lòng thử lại.",
-      });
-      setIsPending(false);
-    }
-  };
+      setIsPending(true);
 
+      try {
+        const payload = {
+          term: form.term.trim(),
+          definition:
+            form.definition.trim(),
+          pronunciation:
+            form.pronunciation.trim(),
+          example:
+            form.example.trim(),
+          category:
+            form.category.trim(),
+          partOfSpeech:
+            form.partOfSpeech,
+          difficulty:
+            form.difficulty,
+          groupIds:
+            selectedGroups,
+        };
+
+        const dup =
+          await findDuplicate(
+            user.uid,
+            payload
+          );
+
+        if (dup) {
+          setDuplicate(dup);
+          setIsPending(false);
+          return;
+        }
+
+        await createWord(
+          user.uid,
+          payload
+        );
+
+        window.location.href =
+          "/words";
+      } catch (error) {
+        setErrors({
+          submit:
+            "Không thể lưu dữ liệu",
+        });
+      }
+
+      setIsPending(false);
+    };
   return (
     <Layout>
       <div className="max-w-2xl mx-auto space-y-6 p-4">
+
         <div className="flex items-center justify-between">
-          <Link href="/words" className="flex items-center text-sm text-muted-foreground hover:text-foreground gap-1">
-            <ArrowLeft className="w-4 h-4" /> Quay lại danh sách
+          <Link href="/words">
+            <Button
+              variant="ghost"
+              size="sm"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Quay lại
+            </Button>
           </Link>
-          <h1 className="text-xl font-bold tracking-tight">Thêm từ vựng mới</h1>
+
+          <h1 className="text-2xl font-bold">
+            Thêm từ vựng
+          </h1>
         </div>
 
         {allWords.length > 0 && (
-          <Card className="border-dashed border-primary/40 bg-primary/5">
+          <Card>
             <CardContent className="pt-6 space-y-3">
-              <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="search-word" className="text-primary font-medium flex items-center gap-1.5">
-                  <Search className="w-4 h-4" /> Tra cứu nhanh từ vựng cũ để sao chép nghĩa
-                </Label>
-                <Input
-                  id="search-word"
-                  placeholder="Gõ từ tiếng Anh hoặc nghĩa tiếng Việt để tra nhanh..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-background"
-                />
-              </div>
 
-              {searchQuery.trim() !== "" && (
-                <div className="border rounded-md max-h-44 overflow-y-auto divide-y bg-background shadow-inner">
-                  {filteredWords.length === 0 ? (
-                    <div className="p-3 text-sm text-muted-foreground text-center">
-                      Không tìm thấy từ nào khớp với nội dung tra cứu
+              <Label>
+                Tìm từ đã có để sao chép
+              </Label>
+
+              <Input
+                placeholder="Tìm từ..."
+                value={searchQuery}
+                onChange={(e) =>
+                  setSearchQuery(
+                    e.target.value
+                  )
+                }
+              />
+
+              {searchQuery.trim() && (
+                <div className="border rounded-lg max-h-48 overflow-auto">
+
+                  {filteredWords.length ===
+                  0 ? (
+                    <div className="p-3 text-sm text-muted-foreground">
+                      Không tìm thấy
                     </div>
                   ) : (
-                    filteredWords.map((word) => (
-                      <div
-                        key={word.id || word.term}
-                        className="p-2.5 flex items-center justify-between text-sm hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="truncate pr-3">
-                          <span className="font-semibold text-foreground">{word.term}</span>{" "}
-                          <span className="text-xs text-muted-foreground italic">
-                            ({Array.isArray(word.partOfSpeech) ? word.partOfSpeech.join(", ") : (word.partOfSpeech || "chưa rõ loại")})
-                          </span>
-                          <p className="text-xs text-muted-foreground truncate mt-0.5">{word.definition}</p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          className="h-8 flex-shrink-0 font-medium text-xs gap-1"
-                          onClick={() => {
-                            handleCopyWord(word.id || "");
-                            setSearchQuery("");
-                          }}
+                    filteredWords.map(
+                      (word) => (
+                        <div
+                          key={word.id}
+                          className="flex items-center justify-between p-3 border-b"
                         >
-                          <Copy className="w-3 h-3" /> Sao chép
-                        </Button>
-                      </div>
-                    ))
+                          <div>
+                            <p className="font-medium">
+                              {word.term}
+                            </p>
+
+                            <p className="text-xs text-muted-foreground">
+                              {
+                                word.definition
+                              }
+                            </p>
+                          </div>
+
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() =>
+                              copyWordData(
+                                word.id
+                              )
+                            }
+                          >
+                            <Copy className="w-3 h-3 mr-1" />
+                            Sao chép
+                          </Button>
+                        </div>
+                      )
+                    )
                   )}
+
                 </div>
               )}
+
             </CardContent>
           </Card>
         )}
 
         <Card>
           <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              
-              <div className="space-y-1.5">
-                <Label htmlFor="term">Từ vựng tiếng Anh <span className="text-destructive">*</span></Label>
+
+            <form
+              onSubmit={
+                handleSubmit
+              }
+              className="space-y-5"
+            >
+
+              <div>
+                <Label>Từ *</Label>
+
                 <Input
-                  id="term"
-                  placeholder="Ví dụ: Ephemeral, Break a leg..."
                   value={form.term}
-                  onChange={(e) => set("term")(e.target.value)}
-                  className={errors.term ? "border-destructive" : ""}
+                  onChange={(e) =>
+                    setField(
+                      "term"
+                    )(
+                      e.target.value
+                    )
+                  }
+                  placeholder="English word"
                 />
-                {errors.term && <p className="text-xs text-destructive">{errors.term}</p>}
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="space-y-1.5">
-                  <Label htmlFor="pronunciation" className="text-muted-foreground">Phiên âm <span className="text-xs font-normal">(Tùy chọn)</span></Label>
-                  <Input
-                    id="pronunciation"
-                    placeholder="Ví dụ: /ɪˈfemərəl/"
-                    value={form.pronunciation}
-                    onChange={(e) => set("pronunciation")(e.target.value)}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground">
-                    Từ loại / Dạng từ <span className="text-xs font-normal">(Có thể chọn nhiều)</span>
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {POS_OPTIONS.map((pos) => {
-                      const isSelected = parsePartsOfSpeech(form.partOfSpeech).includes(pos.value);
-                      return (
-                        <button
-                          key={pos.value}
-                          type="button"
-                          onClick={() => handleTogglePos(pos.value)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 ${
-                            isSelected 
-                              ? "bg-primary text-primary-foreground border-primary shadow-sm" 
-                              : "bg-background text-muted-foreground border-border hover:bg-muted"
-                          }`}
-                        >
-                          {isSelected && <Check className="w-3 h-3" />}
-                          {pos.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Label>Nhóm từ vựng</Label>
-                <Input
-                  placeholder="Tìm nhóm..."
-                  value={groupSearch}
-                  onChange={(e) => setGroupSearch(e.target.value)}
-                />
-                <div className="border rounded-lg p-2 max-h-40 overflow-auto">
-                  {groups
-                    .filter((g) => g.name.toLowerCase().includes(groupSearch.toLowerCase()))
-                    .map((group) => (
-                      <label
-                        key={group.id}
-                        className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedGroups.includes(group.id)}
-                          onChange={() => {
-                            if (selectedGroups.includes(group.id)) {
-                              setSelectedGroups(selectedGroups.filter((id) => id !== group.id));
-                            } else {
-                              setSelectedGroups([...selectedGroups, group.id]);
-                            }
-                          }}
-                        />
-                        <span>{group.name}</span>
-                      </label>
-                    ))}
-                </div>
-                {selectedGroups.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Đã chọn {selectedGroups.length} nhóm
+                {errors.term && (
+                  <p className="text-sm text-destructive mt-1">
+                    {errors.term}
                   </p>
                 )}
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="definition">Định nghĩa / Nghĩa của từ <span className="text-destructive">*</span></Label>
-                <Textarea
-                  id="definition"
-                  placeholder="Nhập ý nghĩa tiếng Việt chi tiết của từ..."
-                  value={form.definition}
-                  onChange={(e) => set("definition")(e.target.value)}
-                  className={errors.definition ? "border-destructive" : ""}
-                />
-                {errors.definition && <p className="text-xs text-destructive">{errors.definition}</p>}
-              </div>
+              <div>
+                <Label>
+                  Phiên âm
+                </Label>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="example" className="text-muted-foreground">Ví dụ minh họa <span className="text-xs font-normal">(Tùy chọn)</span></Label>
-                <Textarea
-                  id="example"
-                  placeholder="Đặt câu ví dụ giúp bạn dễ nhớ từ này hơn..."
-                  value={form.example}
-                  onChange={(e) => set("example")(e.target.value)}
+                <Input
+                  value={
+                    form.pronunciation
+                  }
+                  onChange={(e) =>
+                    setField(
+                      "pronunciation"
+                    )(
+                      e.target.value
+                    )
+                  }
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="category" className="text-muted-foreground">Danh mục / Chủ đề <span className="text-xs font-normal">(Tùy chọn)</span></Label>
-                  <Input
-                    id="category"
-                    placeholder="Ví dụ: Công nghệ, Đời sống..."
-                    value={form.category}
-                    onChange={(e) => set("category")(e.target.value)}
-                  />
+              <div>
+                <Label>
+                  Từ loại
+                </Label>
+
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {POS_OPTIONS.map(
+                    (pos) => {
+                      const selected =
+                        parsePos(
+                          form.partOfSpeech
+                        ).includes(
+                          pos.value
+                        );
+
+                      return (
+                        <button
+                          key={
+                            pos.value
+                          }
+                          type="button"
+                          onClick={() =>
+                            togglePos(
+                              pos.value
+                            )
+                          }
+                          className={`px-3 py-2 rounded-lg border text-sm ${
+                            selected
+                              ? "bg-primary text-primary-foreground"
+                              : ""
+                          }`}
+                        >
+                          {selected && (
+                            <Check className="w-3 h-3 inline mr-1" />
+                          )}
+
+                          {
+                            pos.label
+                          }
+                        </button>
+                      );
+                    }
+                  )}
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="difficulty">Mức độ khó</Label>
-                  <Select 
-                    value={form.difficulty} 
-                    onValueChange={(val: "easy" | "medium" | "hard") => set("difficulty")(val)}
-                  >
-                    <SelectTrigger id="difficulty">
-                      <SelectValue placeholder="Chọn độ khó" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="easy">Dễ (Easy)</SelectItem>
-                      <SelectItem value="medium">Trung bình (Medium)</SelectItem>
-                      <SelectItem value="hard">Khó (Hard)</SelectItem>
-                    </SelectContent>
-                  </Select>
+              </div>
+
+              <div>
+                <Label>
+                  Nghĩa *
+                </Label>
+
+                <Textarea
+                  value={
+                    form.definition
+                  }
+                  onChange={(e) =>
+                    setField(
+                      "definition"
+                    )(
+                      e.target.value
+                    )
+                  }
+                  rows={4}
+                />
+
+                {errors.definition && (
+                  <p className="text-sm text-destructive mt-1">
+                    {
+                      errors.definition
+                    }
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label>
+                  Ví dụ
+                </Label>
+
+                <Textarea
+                  value={
+                    form.example
+                  }
+                  onChange={(e) =>
+                    setField(
+                      "example"
+                    )(
+                      e.target.value
+                    )
+                  }
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <Label>
+                  Chủ đề
+                </Label>
+
+                <Input
+                  value={
+                    form.category
+                  }
+                  onChange={(e) =>
+                    setField(
+                      "category"
+                    )(
+                      e.target.value
+                    )
+                  }
+                  placeholder="IELTS, Business..."
+                />
+              </div>
+
+              <div>
+                <Label>
+                  Độ khó
+                </Label>
+
+                <Select
+                  value={
+                    form.difficulty
+                  }
+                  onValueChange={(
+                    value
+                  ) =>
+                    setField(
+                      "difficulty"
+                    )(
+                      value
+                    )
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    <SelectItem value="easy">
+                      Dễ
+                    </SelectItem>
+
+                    <SelectItem value="medium">
+                      Trung bình
+                    </SelectItem>
+
+                    <SelectItem value="hard">
+                      Khó
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>
+                  Nhóm từ vựng
+                </Label>
+
+                <Input
+                  placeholder="Tìm nhóm..."
+                  value={
+                    groupSearch
+                  }
+                  onChange={(e) =>
+                    setGroupSearch(
+                      e.target.value
+                    )
+                  }
+                />
+
+                <div className="border rounded-lg mt-3 p-2 max-h-48 overflow-auto">
+
+                  {groups
+                    .filter((g) =>
+                      g.name
+                        .toLowerCase()
+                        .includes(
+                          groupSearch.toLowerCase()
+                        )
+                    )
+                    .map(
+                      (group) => (
+                        <label
+                          key={
+                            group.id
+                          }
+                          className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedGroups.includes(
+                              group.id
+                            )}
+                            onChange={() => {
+                              if (
+                                selectedGroups.includes(
+                                  group.id
+                                )
+                              ) {
+                                setSelectedGroups(
+                                  selectedGroups.filter(
+                                    (
+                                      x
+                                    ) =>
+                                      x !==
+                                      group.id
+                                  )
+                                );
+                              } else {
+                                setSelectedGroups(
+                                  [
+                                    ...selectedGroups,
+                                    group.id,
+                                  ]
+                                );
+                              }
+                            }}
+                          />
+
+                          <span>
+                            {
+                              group.name
+                            }
+                          </span>
+                        </label>
+                      )
+                    )}
+
                 </div>
+
+                {selectedGroups.length >
+                  0 && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Đã chọn{" "}
+                    {
+                      selectedGroups.length
+                    }{" "}
+                    nhóm
+                  </p>
+                )}
               </div>
 
               {duplicate && (
-                <div className="p-3 bg-destructive/10 text-destructive rounded-lg flex items-start gap-2 text-sm">
-                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <span className="font-semibold">Từ này đã tồn tại:</span> "{duplicate.term}" đã có trong hệ thống với nghĩa là "{duplicate.definition}".
-                  </div>
+                <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+                  Từ này đã tồn tại:
+                  <br />
+                  <strong>
+                    {
+                      duplicate.term
+                    }
+                  </strong>
                 </div>
               )}
 
               {errors.submit && (
-                <div className="p-3 bg-destructive/10 text-destructive rounded-lg flex items-center gap-2 text-sm">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <div>{errors.submit}</div>
+                <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+                  {
+                    errors.submit
+                  }
                 </div>
               )}
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-4">
+
                 <Link href="/words">
-                  <Button type="button" variant="ghost" disabled={isPending}>
-                    Hủy bỏ
+                  <Button
+                    type="button"
+                    variant="ghost"
+                  >
+                    Hủy
                   </Button>
                 </Link>
-                <Button type="submit" disabled={isPending}>
+
+                <Button
+                  type="submit"
+                  disabled={
+                    isPending
+                  }
+                >
                   <Plus className="w-4 h-4 mr-2" />
-                  {isPending ? "Đang lưu..." : "Thêm từ vựng"}
+
+                  {isPending
+                    ? "Đang lưu..."
+                    : "Thêm từ"}
                 </Button>
+
               </div>
 
             </form>
+
           </CardContent>
         </Card>
+
       </div>
     </Layout>
   );
-                          
 }
