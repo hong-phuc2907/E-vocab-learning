@@ -5,7 +5,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 
-// SỬA LỖI MÚI GIỜ: Tự bóc tách chuỗi số, loại bỏ 100% hiện tượng đảo ngày/tháng (7/6 và 6/7)
+// SỬA LỖI MÚI GIỜ: Tự bóc tách chuỗi số, loại bỏ 100% hiện tượng đảo ngày/tháng
 function formatDateYYYYMMDD(d: Date): string {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -241,7 +241,6 @@ export async function getDueWords(uid: string): Promise<Word[]> {
     map.set(word.id, word);
   });
 
-  // Quét thêm trường hợp phòng vệ dữ liệu lỗi (chuỗi rỗng hoặc Invalid Date format từ DB cũ)
   const allSnap = await getDocs(wordsCol(uid));
   allSnap.docs.forEach((d) => {
     const data = d.data();
@@ -326,6 +325,44 @@ export async function createGroup(uid: string, name: string, parentId: string | 
   return ref.id;
 }
 
+// BỔ SUNG: Hàm nâng cao đáp ứng đúng yêu cầu của trang UI group-detail.tsx tránh lỗi Build Rollup
+export async function createGroupAdvanced(
+  uid: string, 
+  input: {
+    name: string;
+    parentId: string | null;
+    description?: string;
+    color?: string;
+    icon?: string;
+  }
+) {
+  const ref = doc(groupsCol(uid));
+  let path: string[] = [];
+
+  if (input.parentId) {
+    const parentSnap = await getDoc(doc(db, "users", uid, "groups", input.parentId));
+    if (parentSnap.exists()) {
+      const parent = parentSnap.data();
+      path = [...(parent.path ?? []), input.parentId];
+    }
+  }
+
+  await setDoc(ref, {
+    name: input.name,
+    parentId: input.parentId,
+    path,
+    description: input.description ?? "",
+    color: input.color ?? "#000000",
+    icon: input.icon ?? "",
+    wordCount: 0,
+    childrenCount: 0,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  return ref.id;
+}
+
 export async function listGroups(uid: string): Promise<Group[]> { 
   const snap = await getDocs(groupsCol(uid)); 
   return snap.docs.map((d) => toGroup(d.id, d.data())); 
@@ -393,7 +430,6 @@ export async function getGroupTree(uid: string): Promise<GroupNode[]> {
   const nodeMap: Record<string, GroupNode> = {};
   groups.forEach((g) => { nodeMap[g.id] = { ...g, subGroups: [], words: [] }; });
   
-  // SỬA LỖI 1: Tạo bản sao độc lập dữ liệu tránh chồng lấn bộ nhớ tham chiếu (Deep Reference Mapping)
   words.forEach((w) => { 
     if (w.groupIds) {
       w.groupIds.forEach((gId) => { 
@@ -485,7 +521,6 @@ export async function getStats(uid: string): Promise<Stats> {
   const totalCorrect = words.reduce((s, w) => s + w.correctCount, 0); 
   const accuracy = totalReviews > 0 ? Math.round((totalCorrect / totalReviews) * 100) : 0;
   
-  // SỬA LỖI 2: Tính toán chính xác logic Streak hiển thị thực tế
   const meta = metaSnap.exists() ? metaSnap.data() : null; 
   const lastStudied = meta?.lastStudiedDate; 
   const today = todayKey(); 
@@ -505,4 +540,5 @@ export async function getStats(uid: string): Promise<Stats> {
     accuracy, 
     currentStreak
   };
-}
+                                     }
+    
