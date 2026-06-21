@@ -163,11 +163,19 @@ export default function GroupDetail({
           )}
         </div>
 
-        <div>
-          <h1 className="text-3xl font-bold">
-            📁 {group?.name || "Đang tải nhóm..."}
-          </h1>
-        </div>
+        <div className="flex items-center gap-3">
+  <h1 className="text-3xl font-bold">
+    📁 {group?.name || "Đang tải nhóm..."}
+  </h1>
+
+  {group && (
+    <Link href={`/quiz?group=${group.id}`}>
+      <Button>
+        📝 Làm bài kiểm tra
+      </Button>
+    </Link>
+  )}
+</div>
 
         {/* TỪ TRONG NHÓM */}
         <Card>
@@ -212,11 +220,22 @@ export default function GroupDetail({
               {(children ?? []).map((g) => {
                 if (!g) return null;
                 return (
-                  <Link key={g.id} href={`/groups/${g.id}`}>
-                    <div className="border rounded-lg px-3 py-2 hover:bg-muted cursor-pointer">
-                      📁 {g.name}
-                    </div>
-                  </Link>
+                  <div
+  key={g.id}
+  className="border rounded-lg p-3 flex items-center justify-between w-full"
+>
+  <Link href={`/groups/${g.id}`}>
+    <div className="cursor-pointer">
+      📁 {g.name}
+    </div>
+  </Link>
+
+  <Link href={`/quiz?group=${g.id}`}>
+    <Button size="sm">
+      Kiểm tra
+    </Button>
+  </Link>
+</div>
                 );
               })}
 
