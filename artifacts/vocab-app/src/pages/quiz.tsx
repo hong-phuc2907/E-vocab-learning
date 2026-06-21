@@ -53,6 +53,8 @@ function parseAnswers(value: string) {
 
 export default function Quiz() {
   const { user } = useAuth();
+  const params = new URLSearchParams(window.location.search);
+const groupId = params.get("group");
   const [allWords, setAllWords] = useState<Word[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [started, setStarted] = useState(false);
@@ -171,7 +173,21 @@ export default function Quiz() {
     if (currentIndex === 0) updateStreak(user.uid);
     setIsPending(false);
   };
+if (selectedGroup !== "all") {
+  const groupIds = groups
+    .filter(
+      (g) =>
+        g.id === selectedGroup ||
+        g.path?.includes(selectedGroup)
+    )
+    .map((g) => g.id);
 
+  words = words.filter((w) =>
+    w.groupIds?.some((id) =>
+      groupIds.includes(id)
+    )
+  );
+}
   const handleFillAllCheck = async () => {
     if (!user || !currentQ) return;
     const entered = textAnswer.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean);
