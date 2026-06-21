@@ -24,6 +24,13 @@ import WordEdit from "@/pages/word-edit";
 
 import GroupsPage from "@/pages/groups";
 import GroupDetail from "@/pages/group-detail";
+import WordEdit from "@/pages/word-edit";
+
+<Route path="/words/:id/edit">
+  {(params) => (
+    <WordEdit id={params.id} />
+  )}
+</Route>
 
 const queryClient =
   new QueryClient();
