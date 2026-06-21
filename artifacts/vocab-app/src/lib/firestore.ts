@@ -20,22 +20,24 @@ export interface GroupNode extends Group { subGroups: GroupNode[]; words: Word[]
 export interface Word { id: string; term: string; definition: string; synonyms?: string[]; groupIds?: string[]; partOfSpeech?: string; example?: string; pronunciation?: string; category?: string; difficulty?: "easy" | "medium" | "hard"; masteryLevel: number; reviewCount: number; correctCount: number; lastReviewedAt?: string | null; nextReviewAt?: string | null; createdAt: string; }
 export interface WordInput { term: string; definition: string; synonyms?: string[]; groupIds?: string[]; partOfSpeech?: string; example?: string; pronunciation?: string; category?: string; difficulty?: "easy" | "medium" | "hard"; }
 export interface Stats { totalWords: number; masteredWords: number; dueForReview: number; accuracy: number; currentStreak: number; }
-/* ================= EDIT WORD ================= */
-
 export async function updateWord(
-  uid: string,
+  userId: string,
   wordId: string,
-  data: Partial<WordInput>
+  updates: Partial<Word>
 ) {
+  const ref = doc(
+    db,
+    "users",
+    userId,
+    "words",
+    wordId
+  );
+
   await updateDoc(
-    doc(db, "users", uid, "words", wordId),
-    {
-      ...data,
-    }
+    ref,
+    updates
   );
 }
-
-/* ================= GROUP HELPERS ================= */
 
 export async function getAllChildGroupIds(
   uid: string,
