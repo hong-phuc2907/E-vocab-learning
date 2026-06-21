@@ -5,7 +5,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 
-// SỬA LỖI MÚI GIỜ: Tự bóc tách chuỗi số, loại bỏ 100% hiện tượng đảo ngày/tháng
+// Tự bóc tách chuỗi số, loại bỏ 100% hiện tượng đảo ngày/tháng
 function formatDateYYYYMMDD(d: Date): string {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -168,10 +168,12 @@ export async function findDuplicate(uid: string, input: WordInput): Promise<Word
   }
 
   const snapAll = await getDocs(wordsCol(uid));
-  for (const d of snapAll.docs) {
-    const data = d.data();
-    if ((data.term ?? "").trim().toLowerCase() === search) {
-      return toWord(d.id, data);
+  if (!snapAll.empty) {
+    for (const d of snapAll.docs) {
+      const data = d.data();
+      if ((data.term ?? "").trim().toLowerCase() === search) {
+        return toWord(d.id, data);
+      }
     }
   }
 
@@ -190,6 +192,7 @@ export async function listWords(uid: string, opts?: { search?: string; difficult
 
   const q = query(wordsCol(uid), ...constraints); 
   const snap = await getDocs(q); 
+  if (snap.empty) return [];
   
   let words = snap.docs
     .map((d) => toWord(d.id, d.data()))
@@ -228,27 +231,30 @@ export async function listWords(uid: string, opts?: { search?: string; difficult
 
 export async function getDueWords(uid: string): Promise<Word[]> {
   const now = new Date(); 
+  const map = new Map<string, Word>();
+
   const q = query(wordsCol(uid), where("nextReviewAt", "<=", Timestamp.fromDate(now)));
   const snap = await getDocs(q);
-  const dueWords = snap.docs.map((d) => toWord(d.id, d.data()));
+  if (!snap.empty) {
+    snap.docs.map((d) => toWord(d.id, d.data())).forEach(w => map.set(w.id, w));
+  }
   
   const qNull = query(wordsCol(uid), where("nextReviewAt", "==", null));
   const snapNull = await getDocs(qNull);
-  const newWords = snapNull.docs.map((d) => toWord(d.id, d.data()));
-
-  const map = new Map<string, Word>();
-  [...dueWords, ...newWords].forEach(word => {
-    map.set(word.id, word);
-  });
+  if (!snapNull.empty) {
+    snapNull.docs.map((d) => toWord(d.id, d.data())).forEach(w => map.set(w.id, w));
+  }
 
   const allSnap = await getDocs(wordsCol(uid));
-  allSnap.docs.forEach((d) => {
-    const data = d.data();
-    if (data.nextReviewAt === "" || data.nextReviewAt === undefined) {
-      const parsed = toWord(d.id, data);
-      map.set(parsed.id, parsed);
-    }
-  });
+  if (!allSnap.empty) {
+    allSnap.docs.forEach((d) => {
+      const data = d.data();
+      if (data.nextReviewAt === "" || data.nextReviewAt === undefined) {
+        const parsed = toWord(d.id, data);
+        map.set(parsed.id, parsed);
+      }
+    });
+  }
 
   return Array.from(map.values()).sort((a, b) => a.masteryLevel - b.masteryLevel);
 }
@@ -325,7 +331,6 @@ export async function createGroup(uid: string, name: string, parentId: string | 
   return ref.id;
 }
 
-// BỔ SUNG: Hàm nâng cao đáp ứng đúng yêu cầu của trang UI group-detail.tsx tránh lỗi Build Rollup
 export async function createGroupAdvanced(
   uid: string, 
   input: {
@@ -365,6 +370,7 @@ export async function createGroupAdvanced(
 
 export async function listGroups(uid: string): Promise<Group[]> { 
   const snap = await getDocs(groupsCol(uid)); 
+  if (snap.empty) return [];
   return snap.docs.map((d) => toGroup(d.id, d.data())); 
 }
 
@@ -386,12 +392,14 @@ export async function deleteGroup(uid: string, groupId: string) {
 export async function getChildGroups(uid: string, parentId: string): Promise<Group[]> {
   const q = query(groupsCol(uid), where("parentId", "==", parentId));
   const snap = await getDocs(q);
+  if (snap.empty) return [];
   return snap.docs.map((d) => toGroup(d.id, d.data()));
 }
 
 export async function getAllChildGroupIds(uid: string, parentId: string): Promise<string[]> {
   const groups = await listGroups(uid);
   const result: string[] = [];
+  if (!groups || groups.length === 0) return result;
 
   function dfs(id: string) {
     result.push(id);
@@ -410,8 +418,9 @@ export async function getWordsInGroup(uid: string, groupId: string): Promise<Wor
 }
 
 export async function getWordsByGroups(uid: string, groupIds: string[]): Promise<Word[]> {
-  if (groupIds.length === 0) return [];
+  if (!groupIds || groupIds.length === 0) return [];
   const words = await listWords(uid);
+  if (!words || words.length === 0) return [];
   return words.filter((word) => (word.groupIds ?? []).some((id) => groupIds.includes(id)));
 }
 
@@ -425,21 +434,40 @@ export async function getQuizWords(uid: string, groupId?: string): Promise<Word[
   return getWordsInGroupTree(uid, groupId);
 }
 
+/* VÁ LỖI RUNTIME (Bảo vệ tuyệt đối khi tài khoản trống hoặc mảng null) */
 export async function getGroupTree(uid: string): Promise<GroupNode[]> {
   const [groups, words] = await Promise.all([listGroups(uid), listWords(uid)]); 
   const nodeMap: Record<string, GroupNode> = {};
-  groups.forEach((g) => { nodeMap[g.id] = { ...g, subGroups: [], words: [] }; });
   
-  words.forEach((w) => { 
-    if (w.groupIds) {
-      w.groupIds.forEach((gId) => { 
-        if (nodeMap[gId]) nodeMap[gId].words.push({ ...w }); 
-      });
-    }
+  if (!groups || groups.length === 0) return [];
+  
+  groups.forEach((g) => { 
+    nodeMap[g.id] = { ...g, subGroups: [], words: [] }; 
   });
   
+  if (words && words.length > 0) {
+    words.forEach((w) => { 
+      if (w && w.groupIds && Array.isArray(w.groupIds)) {
+        w.groupIds.forEach((gId) => { 
+          if (nodeMap[gId]) {
+            nodeMap[gId].words.push({ ...w }); 
+          }
+        });
+      }
+    });
+  }
+  
   const rootNodes: GroupNode[] = [];
-  groups.forEach((g) => { const node = nodeMap[g.id]; if (g.parentId && nodeMap[g.parentId]) nodeMap[g.parentId].subGroups.push(node); else rootNodes.push(node); });
+  groups.forEach((g) => { 
+    const node = nodeMap[g.id]; 
+    if (node) {
+      if (g.parentId && nodeMap[g.parentId]) {
+        nodeMap[g.parentId].subGroups.push(node); 
+      } else {
+        rootNodes.push(node); 
+      }
+    }
+  });
   return rootNodes;
 }
 
@@ -507,7 +535,8 @@ export async function updateStreak(uid: string): Promise<number> {
 export async function getStats(uid: string): Promise<Stats> {
   const now = new Date(); 
   const [wordsSnap, metaSnap] = await Promise.all([getDocs(wordsCol(uid)), getDoc(userDoc(uid))]);
-  const words = wordsSnap.docs.map((d) => toWord(d.id, d.data())); 
+  
+  const words = !wordsSnap.empty ? wordsSnap.docs.map((d) => toWord(d.id, d.data())) : []; 
   const totalWords = words.length; 
   const masteredWords = words.filter((w) => w.masteryLevel >= 5).length;
   
@@ -540,5 +569,5 @@ export async function getStats(uid: string): Promise<Stats> {
     accuracy, 
     currentStreak
   };
-                                     }
+                            }
     
