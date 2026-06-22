@@ -368,7 +368,6 @@ return (
         <div className="space-y-2">
 
           {children.map((g) => (
-            <div
               <div
   key={g.id}
   className="border rounded-lg p-3 flex items-center justify-between"
