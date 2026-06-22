@@ -379,48 +379,62 @@ return (
         <div className="space-y-2">
 {children.map((g) => (
   <div
-    key={g.id}
-    className="border rounded-lg p-3 flex items-center justify-between"
-  >
-    <Link href={`/groups/${g.id}`}>
-      <div className="cursor-pointer font-medium hover:text-blue-600">
-        📁 {g.name}
-      </div>
-    </Link>
+  key={g.id}
+  className="border rounded-lg p-3 flex items-center justify-between"
+>
+  <div className="flex items-center gap-3">
 
-    <div className="flex gap-2">
+    <button
+      type="button"
+      className="font-medium hover:text-blue-600"
+      onClick={() => {
+        window.location.href = `/groups/${g.id}`;
+      }}
+    >
+      📁 {g.name}
+    </button>
 
-      <Link href={`/quiz?group=${g.id}`}>
-        <Button size="sm">
-          Kiểm tra
-        </Button>
-      </Link>
-
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        onClick={() => {
-          setEditingGroup(g);
-          setRenameValue(g.name);
-        }}
-      >
-        Đổi tên
-      </Button>
-
-      <Button
-        type="button"
-        size="sm"
-        variant="destructive"
-        onClick={() => {
-          setDeletingGroup(g);
-        }}
-      >
-        Xóa
-      </Button>
-
-    </div>
   </div>
+
+  <div className="flex gap-2">
+
+    <Button
+      type="button"
+      size="sm"
+      onClick={() => {
+        window.location.href = `/quiz?group=${g.id}`;
+      }}
+    >
+      Kiểm tra
+    </Button>
+
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      onClick={() => {
+        console.log("rename", g.name);
+        setEditingGroup(g);
+        setRenameValue(g.name);
+      }}
+    >
+      Đổi tên
+    </Button>
+
+    <Button
+      type="button"
+      size="sm"
+      variant="destructive"
+      onClick={() => {
+        console.log("delete", g.name);
+        setDeletingGroup(g);
+      }}
+    >
+      Xóa
+    </Button>
+
+  </div>
+</div>
 ))}
 
           {children.length === 0 && (
