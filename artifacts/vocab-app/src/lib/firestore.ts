@@ -258,7 +258,41 @@ export async function getDueWords(uid: string): Promise<Word[]> {
 
   return Array.from(map.values()).sort((a, b) => a.masteryLevel - b.masteryLevel);
 }
+export async function renameGroup(
+  uid: string,
+  groupId: string,
+  newName: string
+) {
+  await updateDoc(
+    doc(db, "users", uid, "groups", groupId),
+    {
+      name: newName,
+      updatedAt: serverTimestamp(),
+    }
+  );
+}
 
+export async function deleteGroupSafe(
+  uid: string,
+  groupId: string
+) {
+  const words = await listWords(uid);
+
+  for (const word of words) {
+    if (word.groupIds?.includes(groupId)) {
+      await updateWord(uid, word.id, {
+        groupIds:
+          word.groupIds.filter(
+            (id) => id !== groupId
+          ),
+      });
+    }
+  }
+
+  await deleteDoc(
+    doc(db, "users", uid, "groups", groupId)
+  );
+}
 export async function getDailyWord(uid: string): Promise<Word | null> {
   const snap = await getDocs(wordsCol(uid)); 
   if (snap.empty) return null;
