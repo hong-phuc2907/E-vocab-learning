@@ -3,7 +3,18 @@ import { Link } from "wouter";
 
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/lib/auth-context";
-
+<Button
+  type="button"
+  size="sm"
+  variant="outline"
+  onClick={() => {
+    console.log("CLICK RENAME", g.id);
+    setEditingGroup(g);
+    setRenameValue(g.name);
+  }}
+>
+  Đổi tên
+</Button>
 import {
 getGroup,
 getChildGroups,
