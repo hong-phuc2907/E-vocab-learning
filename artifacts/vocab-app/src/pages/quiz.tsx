@@ -150,46 +150,61 @@ export default function Quiz() {
   }
 
   const filteredWords = useMemo(() => {
-    if (dateFilter === "all")
-      return allWords;
+  let words = [...allWords];
 
+  // lọc theo nhóm
+  if (groupId) {
+    words = words.filter((w) =>
+      w.groupIds?.includes(groupId)
+    );
+  }
+
+  // lọc theo ngày
+  if (dateFilter !== "all") {
     const now = new Date();
 
-    return allWords.filter((word) => {
+    words = words.filter((word) => {
       if (!word.createdAt)
         return false;
 
-      const created =
-        new Date(word.createdAt);
+      const created = new Date(
+        word.createdAt
+      );
 
-      const diff =
-        Math.floor(
-          (now.getTime() -
-            created.getTime()) /
-            86400000
-        );
+      const diffDays = Math.floor(
+        (now.getTime() -
+          created.getTime()) /
+          86400000
+      );
 
       switch (dateFilter) {
         case "today":
-          return diff === 0;
+          return diffDays === 0;
 
         case "yesterday":
-          return diff === 1;
+          return diffDays === 1;
 
         case "3days":
-          return diff <= 3;
+          return diffDays <= 3;
 
         case "7days":
-          return diff <= 7;
+          return diffDays <= 7;
 
         case "30days":
-          return diff <= 30;
+          return diffDays <= 30;
 
         default:
           return true;
       }
     });
-  }, [allWords, dateFilter]);
+  }
+
+  return words;
+}, [
+  allWords,
+  groupId,
+  dateFilter,
+]);
 
   const questions =
     useMemo<QuizQuestion[]>(() => {
