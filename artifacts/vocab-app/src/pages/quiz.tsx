@@ -62,6 +62,13 @@ function normalizeAnswer(value: string) {
 
 export default function Quiz() {
   const { user } = useAuth();
+  const params =
+  new URLSearchParams(
+    window.location.search
+  );
+
+const groupId =
+  params.get("group");
 
   const [allWords, setAllWords] =
     useState<Word[]>([]);
@@ -154,9 +161,18 @@ export default function Quiz() {
 
   // lọc theo nhóm
   if (groupId) {
-    words = words.filter((w) =>
-      w.groupIds?.includes(groupId)
+  words = words.filter((w) => {
+    if (
+      !Array.isArray(
+        w.groupIds
+      )
+    )
+      return false;
+
+    return w.groupIds.includes(
+      groupId
     );
+  });
   }
 
   // lọc theo ngày
