@@ -369,18 +369,20 @@ return (
 
           {children.map((g) => (
             <div
-              key={g.id}
-              className="border rounded-lg p-3 flex items-center justify-between"
-            >
-              <Link
-                href={`/groups/${g.id}`}
-              >
-                <div className="cursor-pointer">
-                  📁 {g.name}
-                </div>
-              </Link>
+              <div
+  key={g.id}
+  className="border rounded-lg p-3 flex items-center justify-between"
+>
+  <div
+    className="cursor-pointer font-medium"
+    onClick={() => {
+      window.location.href = `/groups/${g.id}`;
+    }}
+  >
+    📁 {g.name}
+  </div>
 
-              <div className="flex gap-2">
+  <div className="flex gap-2">
 
                 <Link
                   href={`/quiz?group=${g.id}`}
@@ -391,31 +393,31 @@ return (
                 </Link>
 
                 <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setEditingGroup(
-                      g
-                    );
-                    setRenameValue(
-                      g.name
-                    );
-                  }}
-                >
-                  Đổi tên
-                </Button>
+  size="sm"
+  variant="outline"
+  onClick={(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setEditingGroup(g);
+    setRenameValue(g.name);
+  }}
+>
+  Đổi tên
+</Button>
 
                 <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() =>
-                    setDeletingGroup(
-                      g
-                    )
-                  }
-                >
-                  Xóa
-                </Button>
+  size="sm"
+  variant="destructive"
+  onClick={(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setDeletingGroup(g);
+  }}
+>
+  Xóa
+</Button>
 
               </div>
             </div>
