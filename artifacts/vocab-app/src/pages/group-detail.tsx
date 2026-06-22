@@ -366,61 +366,51 @@ return (
       <CardContent>
 
         <div className="space-y-2">
-
-          {children.map((g) => (
-              <div
-  key={g.id}
-  className="border rounded-lg p-3 flex items-center justify-between"
->
+{children.map((g) => (
   <div
-    className="cursor-pointer font-medium"
-    onClick={() => {
-      window.location.href = `/groups/${g.id}`;
-    }}
+    key={g.id}
+    className="border rounded-lg p-3 flex items-center justify-between"
   >
-    📁 {g.name}
+    <Link href={`/groups/${g.id}`}>
+      <div className="cursor-pointer font-medium hover:text-blue-600">
+        📁 {g.name}
+      </div>
+    </Link>
+
+    <div className="flex gap-2">
+
+      <Link href={`/quiz?group=${g.id}`}>
+        <Button size="sm">
+          Kiểm tra
+        </Button>
+      </Link>
+
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={() => {
+          setEditingGroup(g);
+          setRenameValue(g.name);
+        }}
+      >
+        Đổi tên
+      </Button>
+
+      <Button
+        type="button"
+        size="sm"
+        variant="destructive"
+        onClick={() => {
+          setDeletingGroup(g);
+        }}
+      >
+        Xóa
+      </Button>
+
+    </div>
   </div>
-
-  <div className="flex gap-2">
-
-                <Link
-                  href={`/quiz?group=${g.id}`}
-                >
-                  <Button size="sm">
-                    Kiểm tra
-                  </Button>
-                </Link>
-
-                <Button
-  size="sm"
-  variant="outline"
-  onClick={(e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    setEditingGroup(g);
-    setRenameValue(g.name);
-  }}
->
-  Đổi tên
-</Button>
-
-                <Button
-  size="sm"
-  variant="destructive"
-  onClick={(e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    setDeletingGroup(g);
-  }}
->
-  Xóa
-</Button>
-
-              </div>
-            </div>
-          ))}
+))}
 
           {children.length === 0 && (
             <p className="text-muted-foreground">
