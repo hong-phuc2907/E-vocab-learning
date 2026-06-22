@@ -276,22 +276,46 @@ export async function deleteGroupSafe(
   uid: string,
   groupId: string
 ) {
+  const childIds =
+    await getAllChildGroupIds(
+      uid,
+      groupId
+    );
+
   const words = await listWords(uid);
 
   for (const word of words) {
-    if (word.groupIds?.includes(groupId)) {
-      await updateWord(uid, word.id, {
-        groupIds:
-          word.groupIds.filter(
-            (id) => id !== groupId
-          ),
-      });
+    const remaining =
+      (word.groupIds ?? []).filter(
+        (id) =>
+          !childIds.includes(id)
+      );
+
+    if (
+      remaining.length !==
+      (word.groupIds ?? []).length
+    ) {
+      await updateWord(
+        uid,
+        word.id,
+        {
+          groupIds: remaining,
+        }
+      );
     }
   }
 
-  await deleteDoc(
-    doc(db, "users", uid, "groups", groupId)
-  );
+  for (const id of childIds.reverse()) {
+    await deleteDoc(
+      doc(
+        db,
+        "users",
+        uid,
+        "groups",
+        id
+      )
+    );
+  }
 }
 export async function getDailyWord(uid: string): Promise<Word | null> {
   const snap = await getDocs(wordsCol(uid)); 
