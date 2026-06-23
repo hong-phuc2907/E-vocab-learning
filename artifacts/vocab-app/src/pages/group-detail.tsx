@@ -600,7 +600,7 @@ return (
 )}
 
     {/* MODAL XÓA */}
-    {deletingGroup && (
+
     {deletingGroup && (
   <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
     <Card className="w-[420px']">
