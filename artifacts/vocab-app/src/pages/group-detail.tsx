@@ -563,104 +563,80 @@ return (
     </Card>
 
     {/* MODAL ĐỔI TÊN */}
-{editingGroup && (
+  {editingGroup && (
   <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
     <Card className="w-[420px]">
-        <CardHeader>
-          <CardTitle>
-            ✏️ Đổi tên nhóm
-          </CardTitle>
-        </CardHeader>
+      <CardHeader>
+        <CardTitle>
+          ✏️ Đổi tên nhóm
+        </CardTitle>
+      </CardHeader>
 
-        <CardContent className="space-y-3">
+      <CardContent className="space-y-3">
+        <Input
+          value={renameValue}
+          onChange={(e) =>
+            setRenameValue(e.target.value)
+          }
+        />
 
-          <Input
-            value={renameValue}
-            onChange={(e) =>
-              setRenameValue(
-                e.target.value
-              )
+        <div className="flex gap-2">
+          <Button onClick={handleRename}>
+            Lưu
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() =>
+              setEditingGroup(null)
             }
-          />
-
-          <div className="flex gap-2">
-
-            <Button
-              onClick={
-                handleRename
-              }
-            >
-              Lưu
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={() =>
-                setEditingGroup(
-                  null
-                )
-              }
-            >
-              Hủy
-            </Button>
-
-          </div>
-
-        </CardContent>
-      </Card>
-    )}
+          >
+            Hủy
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+)}
 
     {/* MODAL XÓA */}
     {deletingGroup && (
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            🗑 Xóa nhóm
-          </CardTitle>
-        </CardHeader>
+    {deletingGroup && (
+  <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
+    <Card className="w-[420px']">
+      <CardHeader>
+        <CardTitle>
+          🗑 Xóa nhóm
+        </CardTitle>
+      </CardHeader>
 
-        <CardContent>
+      <CardContent>
+        <p>
+          Xóa nhóm:
+          <b>{deletingGroup.name}</b> ?
+        </p>
 
-          <p>
-            Xóa nhóm:
-            <b>
-              {" "}
-              {
-                deletingGroup.name
-              }
-            </b>
-            ?
-          </p>
+        <div className="flex gap-2 mt-3">
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+          >
+            Xóa
+          </Button>
 
-          <div className="flex gap-2 mt-3">
-
-            <Button
-              variant="destructive"
-              onClick={
-                handleDelete
-              }
-            >
-              Xóa
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={() =>
-                setDeletingGroup(
-                  null
-                )
-              }
-            >
-              Hủy
-            </Button>
-
-          </div>
-
-        </CardContent>
-      </Card>
-    </div>
+          <Button
+            variant="outline"
+            onClick={() =>
+              setDeletingGroup(null)
+            }
+          >
+            Hủy
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
 )}
-
   </div>
 </Layout>
 
