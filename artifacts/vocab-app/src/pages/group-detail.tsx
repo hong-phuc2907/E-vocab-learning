@@ -563,8 +563,9 @@ return (
     </Card>
 
     {/* MODAL ĐỔI TÊN */}
-    {editingGroup && (
-      <Card>
+{editingGroup && (
+  <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
+    <Card className="w-[420px]">
         <CardHeader>
           <CardTitle>
             ✏️ Đổi tên nhóm
@@ -657,7 +658,8 @@ return (
 
         </CardContent>
       </Card>
-    )}
+    </div>
+)}
 
   </div>
 </Layout>
