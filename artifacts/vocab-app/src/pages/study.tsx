@@ -1,3 +1,5 @@
+'use client'; // Thêm dòng này nếu bạn dùng Next.js App Router, nếu dùng Vite thì bỏ qua
+
 import { useState, useCallback, useEffect } from "react";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/lib/auth-context";
@@ -8,16 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
 import { MascotCelebration } from "@/components/mascot-celebration";
-
-function MasteryDots({ level }: { level: number }) {
-  return (
-    <div className="flex gap-1">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className={`w-2 h-2 rounded-full transition-all ${i < level ? "bg-primary" : "bg-muted"}`} />
-      ))}
-    </div>
-  );
-}
 
 const DIFF_LABELS: Record<string, string> = { easy: "Dễ", medium: "Trung bình", hard: "Khó" };
 const POS_LABELS: Record<string, string> = {
@@ -38,16 +30,20 @@ export default function Study() {
   const [startTime, setStartTime] = useState<number | null>(null);
   const [isPending, setIsPending] = useState(false);
 
-  // States hỗ trợ hiệu ứng chuyển cảnh mượt mà
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [slideDirection, setSlideDirection] = useState<"left" | "right">("left");
 
   const load = useCallback(async () => {
     if (!user) return;
     setIsLoading(true);
-    const ws = await getDueWords(user.uid);
-    setWords(ws);
-    setIsLoading(false);
+    try {
+      const ws = await getDueWords(user.uid);
+      setWords(ws || []);
+    } catch (error) {
+      console.error("Lỗi tải từ vựng:", error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [user]);
 
   useEffect(() => { load(); }, [load]);
@@ -60,38 +56,38 @@ export default function Study() {
   }, [flipped]);
 
   const handleReview = useCallback(async (correct: boolean) => {
-    if (!currentWord || !user) return;
+    if (!currentWord || !user || isPending || isTransitioning) return;
     setIsPending(true);
     
-    await reviewWord(user.uid, currentWord.id, correct);
-    if (sessionTotal === 0) updateStreak(user.uid);
-    if (correct) setSessionCorrect((c) => c + 1);
-    setSessionTotal((t) => t + 1);
+    try {
+      await reviewWord(user.uid, currentWord.id, correct);
+      if (sessionTotal === 0) updateStreak(user.uid);
+      if (correct) setSessionCorrect((c) => c + 1);
+      setSessionTotal((t) => t + 1);
 
-    if (currentIndex + 1 >= words.length) {
-      setDone(true);
-    } else {
-      // Bắt đầu hiệu ứng: Thẻ cũ bay ra ngoài
-      setIsTransitioning(true);
-      setSlideDirection(correct ? "left" : "right");
+      if (currentIndex + 1 >= words.length) {
+        setDone(true);
+      } else {
+        setIsTransitioning(true);
+        setSlideDirection(correct ? "left" : "right");
 
-      // Pha 1: Chờ thẻ cũ ẩn đi hoàn toàn (200ms) rồi đổi data sang thẻ mới
-      setTimeout(() => {
-        setCurrentIndex((i) => i + 1);
-        setFlipped(false);
-        setStartTime(null);
-        
-        // Đảo ngược hướng để thẻ mới "bắn" vào từ phía đối diện
-        setSlideDirection(correct ? "right" : "left");
-      }, 200);
+        setTimeout(() => {
+          setCurrentIndex((i) => i + 1);
+          setFlipped(false);
+          setStartTime(null);
+          setSlideDirection(correct ? "right" : "left");
+        }, 200);
 
-      // Pha 2: Đưa thẻ mới về vị trí trung tâm ổn định
-      setTimeout(() => {
-        setIsTransitioning(false);
-      }, 260);
+        setTimeout(() => {
+          setIsTransitioning(false);
+        }, 260);
+      }
+    } catch (error) {
+      console.error("Lỗi lưu kết quả ôn tập:", error);
+    } finally {
+      setIsPending(false);
     }
-    setIsPending(false);
-  }, [currentWord, currentIndex, words, user, sessionTotal, correct]);
+  }, [currentWord, currentIndex, words.length, user, sessionTotal, isPending, isTransitioning]);
 
   if (isLoading) {
     return (
@@ -177,7 +173,6 @@ export default function Study() {
 
         <Progress value={progress} className="h-2" />
 
-        {/* 1. Layer Wrapper: Chịu trách nhiệm tịnh tiến Slide và Mờ dần (Fade) */}
         <div 
           className={`transition-all duration-300 ease-out transform-gpu
             ${isTransitioning 
@@ -185,7 +180,6 @@ export default function Study() {
               : "translate-x-0 opacity-100 rotate-0"
             }`}
         >
-          {/* 2. Layer Card: Chịu trách nhiệm giữ chiều sâu và hiệu ứng lật 3D biệt lập */}
           <div 
             className="relative h-80 cursor-pointer" 
             style={{ perspective: "1000px" }} 
@@ -195,7 +189,6 @@ export default function Study() {
               className="relative w-full h-full transition-transform duration-500"
               style={{ transformStyle: "preserve-3d", transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)" }}
             >
-              {/* Mặt trước của thẻ */}
               <div
                 className="absolute inset-0 bg-card border border-card-border rounded-2xl p-8 flex flex-col items-center justify-center shadow-lg"
                 style={{ backfaceVisibility: "hidden" }}
@@ -213,7 +206,6 @@ export default function Study() {
                 </div>
               </div>
 
-              {/* Mặt sau của thẻ */}
               <div
                 className="absolute inset-0 bg-primary text-primary-foreground rounded-2xl p-8 flex flex-col justify-center shadow-lg"
                 style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
