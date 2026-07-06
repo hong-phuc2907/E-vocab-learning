@@ -130,48 +130,49 @@ return (
 
       <div className="col-span-2 space-y-6">
 
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 auto-rows-fr">
 
-          {featureCards.map((card) => (
-            <Link
-              key={card.href}
-              href={card.href}
-            >
-              <div className="bg-card border rounded-2xl p-5 cursor-pointer hover:shadow-md transition-all hover:-translate-y-0.5 group">
+  {featureCards.map((card) => (
+    <Link
+      key={card.href}
+      href={card.href}
+      className="h-full"
+    >
+      <div className="h-full bg-card border rounded-2xl p-5 cursor-pointer hover:shadow-md transition-all hover:-translate-y-0.5 group flex flex-col">
 
-                <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start justify-between mb-4">
 
-                  <div
-                    className={`w-12 h-12 rounded-xl ${card.bg} ${card.border} border flex items-center justify-center`}
-                  >
-                    <card.icon
-                      className={`w-6 h-6 ${card.text}`}
-                    />
-                  </div>
+          <div
+            className={`w-12 h-12 rounded-xl ${card.bg} ${card.border} border flex items-center justify-center`}
+          >
+            <card.icon
+              className={`w-6 h-6 ${card.text}`}
+            />
+          </div>
 
-                  <div
-                    className={`w-8 h-8 rounded-full ${card.bg} flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity`}
-                  >
-                    <ArrowRight
-                      className={`w-4 h-4 ${card.text}`}
-                    />
-                  </div>
-
-                </div>
-
-                <h3 className="font-semibold mb-1">
-                  {card.title}
-                </h3>
-
-                <p className="text-sm text-muted-foreground">
-                  {card.desc}
-                </p>
-
-              </div>
-            </Link>
-          ))}
+          <div
+            className={`w-8 h-8 rounded-full ${card.bg} flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity`}
+          >
+            <ArrowRight
+              className={`w-4 h-4 ${card.text}`}
+            />
+          </div>
 
         </div>
+
+        <h3 className="font-semibold mb-1">
+          {card.title}
+        </h3>
+
+        <p className="text-sm text-muted-foreground flex-1">
+          {card.desc}
+        </p>
+
+      </div>
+    </Link>
+  ))}
+
+</div>
 
         <div className="bg-primary/5 border border-primary/15 rounded-2xl px-5 py-4 flex gap-4 items-center">
 
